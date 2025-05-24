@@ -3,7 +3,6 @@ import { VercelAIProvider } from '@voltagent/vercel-ai';
 import { openai } from '@ai-sdk/openai';
 import { FileChange } from '../types/github.js';
 import { ReviewComment, ReviewSeverity, ReviewCategory } from '../types/review.js';
-import { logger } from '../utils/logger.js';
 
 /**
  * StyleAgentの作成
@@ -111,7 +110,20 @@ export class StyleHelpers {
           const varName = declaration.split(/\s+/)[1];
 
           // スネークケースの使用（JavaScriptではキャメルケースが推奨）
-                     if (varName.includes('_') && !varName.startsWith('_') && varName.toUpperCase() !== varName) {
+          // ただし、環境変数アクセスの右辺は除外
+          if (varName.includes('_') && !varName.startsWith('_') && varName.toUpperCase() !== varName) {
+            // 環境変数の値部分（process.env.API_KEY）は変換しない
+            let suggestedFix = content;
+            const envVarPattern = /process\.env\.[A-Z_]+/g;
+            const envVars = content.match(envVarPattern) || [];
+
+            suggestedFix = content.replace(varName, this.toCamelCase(varName));
+
+            // 環境変数の部分は元に戻す
+            envVars.forEach(envVar => {
+              suggestedFix = suggestedFix.replace(envVar.replace(/[A-Z_]+/, this.toCamelCase(envVar.split('.')[2])), envVar);
+            });
+
             issues.push({
               id: `naming-snake-case-${lineNumber}`,
               filename,
@@ -122,7 +134,7 @@ export class StyleHelpers {
               description: `変数名 '${varName}' にスネークケースが使用されています。JavaScriptではキャメルケースが推奨されます。`,
               suggestion: 'キャメルケース（例: userName）を使用してください。',
               codeSnippet: content,
-              suggestedFix: content.replace(varName, this.toCamelCase(varName))
+              suggestedFix: suggestedFix
             });
           }
 
@@ -151,7 +163,7 @@ export class StyleHelpers {
               severity: 'info' as ReviewSeverity,
               title: '大文字定数の適切な使用',
               description: `'${varName}' は大文字のみの名前ですが、constで定義された定数ではありません。`,
-              suggestion: '大文字のみの名前は定数に限定し、通常の変数はキャメルケースを使用してください。',
+              suggestion: 'constで定義された定数のみ大文字を使用し、通常の変数はキャメルケースを使用してください。',
               codeSnippet: content
             });
           }
@@ -181,21 +193,23 @@ export class StyleHelpers {
         });
       }
 
-      // ファイル名の命名規則（ファイル名から推測）
-      if (filename.includes('_') && !filename.includes('.test.') && !filename.includes('.spec.')) {
-        issues.push({
-          id: 'naming-filename-kebab',
-          filename,
-          line: 1,
-          category: 'style' as ReviewCategory,
-          severity: 'info' as ReviewSeverity,
-          title: 'ファイル名ケバブケース推奨',
-          description: 'ファイル名にアンダースコアが使用されています。ケバブケース（ハイフン区切り）が推奨されます。',
-          suggestion: 'ファイル名をケバブケース（例: user-profile.ts）に変更することを検討してください。',
-          codeSnippet: filename
-        });
-      }
+
     });
+
+    // ファイル名の命名規則チェック
+    if (filename.includes('_') && !filename.includes('.test.') && !filename.includes('.spec.')) {
+      issues.push({
+        id: 'naming-filename-kebab',
+        filename,
+        line: 1,
+        category: 'style' as ReviewCategory,
+        severity: 'info' as ReviewSeverity,
+        title: 'ファイル名ケバブケース推奨',
+        description: 'ファイル名にアンダースコアが使用されています。ケバブケース（ハイフン区切り）が推奨されます。',
+        suggestion: 'ファイル名をケバブケース（例: user-profile.ts）に変更することを検討してください。',
+        codeSnippet: filename
+      });
+    }
 
     return issues;
   }
@@ -215,7 +229,7 @@ export class StyleHelpers {
       const lineNumber = index + 1;
 
       // 行末の余分な空白
-      if (content.endsWith(' ') || content.endsWith('\t')) {
+      if ((content.endsWith(' ') || content.endsWith('\t')) && trimmedContent.length > 0) {
         issues.push({
           id: `format-trailing-space-${lineNumber}`,
           filename,
@@ -262,6 +276,23 @@ export class StyleHelpers {
         });
       }
 
+      // 括弧の前後のスペース
+      if (trimmedContent.includes('if(') || trimmedContent.includes('for(') ||
+          trimmedContent.includes('while(') || trimmedContent.includes('function(')) {
+        issues.push({
+          id: `format-space-${lineNumber}`,
+          filename,
+          line: lineNumber,
+          category: 'style' as ReviewCategory,
+          severity: 'info' as ReviewSeverity,
+          title: '括弧前のスペース推奨',
+          description: 'キーワードと括弧の間にスペースがありません。',
+          suggestion: 'if (condition) のように、括弧の前にスペースを追加してください。',
+          codeSnippet: trimmedContent,
+          suggestedFix: trimmedContent.replace(/(\w)\(/g, '$1 (')
+        });
+      }
+
       // セミコロンの一貫性
       if ((trimmedContent.includes('const ') || trimmedContent.includes('let ') ||
            trimmedContent.includes('var ')) && !trimmedContent.endsWith(';') &&
@@ -277,23 +308,6 @@ export class StyleHelpers {
           suggestion: 'セミコロンの使用について一貫したスタイルを維持してください。',
           codeSnippet: trimmedContent,
           suggestedFix: trimmedContent + ';'
-        });
-      }
-
-      // 括弧の前後のスペース
-      if (trimmedContent.includes('if(') || trimmedContent.includes('for(') ||
-          trimmedContent.includes('while(') || trimmedContent.includes('function(')) {
-        issues.push({
-          id: `format-space-${lineNumber}`,
-          filename,
-          line: lineNumber,
-          category: 'style' as ReviewCategory,
-          severity: 'info' as ReviewSeverity,
-          title: '括弧前のスペース推奨',
-          description: 'キーワードと括弧の間にスペースがありません。',
-          suggestion: 'if (condition) のように、括弧の前にスペースを追加してください。',
-          codeSnippet: trimmedContent,
-          suggestedFix: trimmedContent.replace(/(\w)\(/g, '$1 (')
         });
       }
     });
@@ -349,14 +363,15 @@ export class StyleHelpers {
       }
 
       // コンソールログの残存
-      if (content.includes('console.log') && !filename.includes('test')) {
+      if ((content.includes('console.log') || content.includes('console.error')) &&
+          !filename.includes('test') && !filename.includes('spec')) {
         issues.push({
           id: `best-practice-console-log-${lineNumber}`,
           filename,
           line: lineNumber,
           category: 'style' as ReviewCategory,
           severity: 'warning' as ReviewSeverity,
-          title: 'デバッグ用console.logの残存',
+          title: 'console.logの残存',
           description: 'デバッグ用のconsole.logが残存している可能性があります。',
           suggestion: 'デバッグが完了したらconsole.logを削除するか、適切なロガーを使用してください。',
           codeSnippet: content
@@ -393,9 +408,10 @@ export class StyleHelpers {
         });
       }
 
-      // 深いネスト
-      const nestingLevel = (content.match(/{/g) || []).length - (content.match(/}/g) || []).length;
-      if (nestingLevel >= 3) {
+      // 深いネスト（単一行で複数の開き括弧があることをチェック）
+      const openBraces = (content.match(/{/g) || []).length;
+      const closeBraces = (content.match(/}/g) || []).length;
+      if (openBraces >= 3 && closeBraces >= 3) {
         issues.push({
           id: `best-practice-deep-nesting-${lineNumber}`,
           filename,
@@ -447,7 +463,7 @@ export class StyleHelpers {
       }
 
       // 型アサーションの過度な使用
-      if (content.includes(' as ') && !content.includes('const')) {
+      if (/\s+as\s+/.test(content) && !content.includes(' as const')) {
         issues.push({
           id: `ts-type-assertion-${lineNumber}`,
           filename,

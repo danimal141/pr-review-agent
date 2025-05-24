@@ -74,7 +74,10 @@ export class SupervisorAgentHelpers {
     const categories: Record<string, number> = {};
 
     files.forEach(file => {
-      const extension = file.filename.split('.').pop()?.toLowerCase() || 'unknown';
+      const parts = file.filename.split('.');
+      // 拡張子がないか、ファイル名がドットで始まる場合は'unknown'
+      const extension = parts.length > 1 && !file.filename.startsWith('.') ?
+        parts.pop()?.toLowerCase() || 'unknown' : 'unknown';
       categories[extension] = (categories[extension] || 0) + 1;
     });
 

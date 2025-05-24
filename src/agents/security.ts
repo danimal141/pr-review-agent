@@ -3,7 +3,6 @@ import { VercelAIProvider } from '@voltagent/vercel-ai';
 import { openai } from '@ai-sdk/openai';
 import { FileChange } from '../types/github.js';
 import { ReviewComment, ReviewSeverity, ReviewCategory } from '../types/review.js';
-import { logger } from '../utils/logger.js';
 
 /**
  * SecurityAgentの作成
@@ -321,20 +320,24 @@ export class SecurityHelpers {
       }
 
       // HTTPでの機密データ送信
-      if (content.includes('http://') && !content.includes('localhost') &&
-          (content.includes('password') || content.includes('token'))) {
-        issues.push({
-          id: `data-http-exposure-${lineNumber}`,
-          filename,
-          line: lineNumber,
-          category: 'security' as ReviewCategory,
-          severity: 'error' as ReviewSeverity,
-          title: 'HTTP経由での機密データ送信',
-          description: 'HTTPは暗号化されていないため、機密データが盗聴される可能性があります。',
-          suggestion: 'HTTPSを使用して通信を暗号化してください。',
-          codeSnippet: content,
-          suggestedFix: content.replace('http://', 'https://')
-        });
+      if (content.includes('http://') && !content.includes('localhost')) {
+        // HTTPの行を検出し、パッチ全体で機密データが含まれているかチェック
+        const patchLower = patch.toLowerCase();
+        if (patchLower.includes('password') || patchLower.includes('token') ||
+            patchLower.includes('secret') || patchLower.includes('key')) {
+          issues.push({
+            id: `data-http-exposure-${lineNumber}`,
+            filename,
+            line: lineNumber,
+            category: 'security' as ReviewCategory,
+            severity: 'error' as ReviewSeverity,
+            title: 'HTTP経由での機密データ送信',
+            description: 'HTTPは暗号化されていないため、機密データが盗聴される可能性があります。',
+            suggestion: 'HTTPSを使用して通信を暗号化してください。',
+            codeSnippet: content,
+            suggestedFix: content.replace('http://', 'https://')
+          });
+        }
       }
     });
 

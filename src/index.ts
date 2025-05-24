@@ -2,7 +2,7 @@ import { VoltAgent, Agent } from '@voltagent/core';
 import { VercelAIProvider } from '@voltagent/vercel-ai';
 import { openai } from '@ai-sdk/openai';
 import { config, validateConfig } from './utils/config.js';
-import { logger, createLogger } from './utils/logger.js';
+import { createLogger } from './utils/logger.js';
 
 const appLogger = createLogger('APP');
 

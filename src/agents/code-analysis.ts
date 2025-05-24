@@ -3,7 +3,6 @@ import { VercelAIProvider } from '@voltagent/vercel-ai';
 import { openai } from '@ai-sdk/openai';
 import { FileChange } from '../types/github.js';
 import { ReviewComment, ReviewSeverity, ReviewCategory } from '../types/review.js';
-import { logger } from '../utils/logger.js';
 
 /**
  * CodeAnalysisAgentの作成
@@ -108,7 +107,9 @@ export class CodeAnalysisHelpers {
     let cyclomaticComplexity = 1; // ベース値
 
     complexityKeywords.forEach(keyword => {
-      const matches = code.match(new RegExp(`\\b${keyword}\\b`, 'g'));
+      // 正規表現の特殊文字をエスケープ
+      const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const matches = code.match(new RegExp(`\\b${escapedKeyword}\\b`, 'g'));
       if (matches) {
         cyclomaticComplexity += matches.length;
       }
@@ -255,7 +256,7 @@ export class CodeAnalysisHelpers {
           description: '==は型強制を行うため、予期しない結果になる可能性があります。',
           suggestion: '厳密等価演算子（===）の使用を推奨します。',
           codeSnippet: content,
-          suggestedFix: content.replace(/([^=!])=([^=])/g, '$1===$2')
+          suggestedFix: content.replace(/([^!=])==([^=])/g, '$1===$2')
         });
       }
     });
@@ -353,7 +354,13 @@ export class CodeAnalysisHelpers {
     const categories: Record<string, number> = {};
 
     files.forEach(file => {
-      const extension = file.filename.split('.').pop()?.toLowerCase() || 'unknown';
+      let extension: string;
+      if (file.filename.toLowerCase() === 'dockerfile') {
+        extension = 'dockerfile';
+      } else {
+        const parts = file.filename.split('.');
+        extension = parts.length > 1 ? parts.pop()!.toLowerCase() : 'unknown';
+      }
       categories[extension] = (categories[extension] || 0) + 1;
     });
 
