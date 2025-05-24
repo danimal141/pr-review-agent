@@ -1,13 +1,16 @@
 import "dotenv/config";
 import { createCodeAnalysisAgent } from "./agents/code-analysis.js";
 import { createSecurityAgent } from "./agents/security.js";
-import { createStyleAgent } from "./agents/style.js";
+import { createStyleAgentWithTools } from "./agents/style.js";
 import { SummaryAgentHelpers, createSummaryAgent } from "./agents/summary.js";
 import { createSupervisorAgent } from "./agents/supervisor.js";
+import { codeAnalysisTools } from "./tools/code-analysis-tools.js";
 import { CodeMetricsTool } from "./tools/code-metrics.js";
 import { FileAnalyzerTool } from "./tools/file-analyzer.js";
 import { createGitHubAPITool } from "./tools/github-api.js";
+import { securityAnalysisTools } from "./tools/security-analysis-tools.js";
 import { SecurityScannerTool } from "./tools/security-scanner.js";
+import { summaryAnalysisTools } from "./tools/summary-analysis-tools.js";
 import type { GitHubPREvent, PRInfo } from "./types/github.js";
 import type { AgentResult, ReviewComment, ReviewResult } from "./types/review.js";
 import { logger } from "./utils/logger.js";
@@ -20,16 +23,17 @@ export class PRReviewWorkflow {
   private supervisorAgent: ReturnType<typeof createSupervisorAgent>;
   private codeAnalysisAgent: ReturnType<typeof createCodeAnalysisAgent>;
   private securityAgent: ReturnType<typeof createSecurityAgent>;
-  private styleAgent: ReturnType<typeof createStyleAgent>;
+  private styleAgent: ReturnType<typeof createStyleAgentWithTools>;
   private summaryAgent: ReturnType<typeof createSummaryAgent>;
 
   constructor() {
     this.githubAPI = createGitHubAPITool();
     this.supervisorAgent = createSupervisorAgent();
-    this.codeAnalysisAgent = createCodeAnalysisAgent();
-    this.securityAgent = createSecurityAgent();
-    this.styleAgent = createStyleAgent();
-    this.summaryAgent = createSummaryAgent();
+    // 全エージェントをVoltAgent標準のtools付きで作成
+    this.codeAnalysisAgent = createCodeAnalysisAgent(codeAnalysisTools);
+    this.securityAgent = createSecurityAgent(securityAnalysisTools);
+    this.styleAgent = createStyleAgentWithTools();
+    this.summaryAgent = createSummaryAgent(summaryAnalysisTools);
   }
 
   /**
@@ -473,7 +477,7 @@ export async function main() {
       throw new Error("GITHUB_TOKEN環境変数が設定されていません");
     }
 
-    const workflow = new PRReviewWorkflow();
+    const _workflow = new PRReviewWorkflow();
 
     // CLIの場合はここでPRイベントを処理
     logger.info("Main", "PRレビューエージェントの準備完了");

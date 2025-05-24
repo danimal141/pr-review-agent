@@ -1,17 +1,8 @@
 import { openai } from "@ai-sdk/openai";
-import { Agent } from "@voltagent/core";
+import { Agent, type Tool } from "@voltagent/core";
 import { VercelAIProvider } from "@voltagent/vercel-ai";
-import { z } from "zod";
-import { CodeMetrics } from "../tools/code-metrics.js";
-import { FileAnalysisResult } from "../tools/file-analyzer.js";
-import { SecurityScanResult } from "../tools/security-scanner.js";
 import type { SummaryAgent } from "../types/agents.js";
-import {
-  type AgentResult,
-  type ReviewComment,
-  ReviewResult,
-  type ReviewSummary,
-} from "../types/review.js";
+import type { AgentResult, ReviewComment, ReviewSummary } from "../types/review.js";
 import { logger } from "../utils/logger.js";
 
 /**
@@ -23,7 +14,8 @@ import { logger } from "../utils/logger.js";
  * - 優先度別の問題の整理
  * - 最終的な推奨事項の提示
  */
-export function createSummaryAgent(): SummaryAgent {
+// biome-ignore lint/suspicious/noExplicitAny: VoltAgent Tool型の制約によりanyが必要
+export function createSummaryAgent(tools: Tool<any>[] = []): SummaryAgent {
   return new Agent({
     name: "summary-agent",
     instructions: `あなたはPRレビューの結果を統合・要約するSummaryAgentです。
@@ -98,6 +90,7 @@ export function createSummaryAgent(): SummaryAgent {
 \`\`\``,
     llm: new VercelAIProvider(),
     model: openai("gpt-4o-mini"),
+    tools,
   });
 }
 
@@ -198,7 +191,7 @@ export class SummaryAgentHelpers {
       {
         totalIssues: number;
         bySeverity: { critical: number; error: number; warning: number; info: number };
-        categories: Set<string> | string[];
+        categories: Set<string>;
         riskLevel: string;
       }
     > = {};
@@ -218,10 +211,9 @@ export class SummaryAgentHelpers {
       fileImpact[comment.filename].categories.add(comment.category);
     }
 
-    // カテゴリをセットから配列に変換し、リスクレベルを計算
+    // リスクレベルを計算
     for (const filename of Object.keys(fileImpact)) {
       const impact = fileImpact[filename];
-      impact.categories = Array.from(impact.categories);
       impact.riskLevel = SummaryAgentHelpers.calculateFileRiskLevel(impact.bySeverity);
     }
 
