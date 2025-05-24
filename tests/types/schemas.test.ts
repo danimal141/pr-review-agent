@@ -15,10 +15,10 @@ describe("review.ts スキーマ", () => {
     it("有効なseverityレベルを受け入れる", () => {
       const validSeverities = ["info", "warning", "error", "critical"];
 
-      validSeverities.forEach((severity) => {
+      for (const severity of validSeverities) {
         const result = ReviewSeveritySchema.safeParse(severity);
         expect(result.success).toBe(true);
-      });
+      }
     });
 
     it("無効なseverityレベルを拒否する", () => {
@@ -39,10 +39,10 @@ describe("review.ts スキーマ", () => {
         "maintainability",
       ];
 
-      validCategories.forEach((category) => {
+      for (const category of validCategories) {
         const result = ReviewCategorySchema.safeParse(category);
         expect(result.success).toBe(true);
-      });
+      }
     });
 
     it("無効なカテゴリを拒否する", () => {
@@ -280,7 +280,7 @@ describe("github.ts スキーマ", () => {
     it("有効なactionを受け入れる", () => {
       const validActions = ["opened", "synchronize", "reopened"];
 
-      validActions.forEach((action) => {
+      for (const action of validActions) {
         const data = {
           action,
           number: 1,
@@ -302,7 +302,7 @@ describe("github.ts スキーマ", () => {
 
         const result = GitHubPREventSchema.safeParse(data);
         expect(result.success).toBe(true);
-      });
+      }
     });
 
     it("無効なactionを拒否する", () => {
@@ -356,7 +356,7 @@ describe("github.ts スキーマ", () => {
     it("有効なstatusを受け入れる", () => {
       const validStatuses = ["added", "modified", "removed", "renamed"];
 
-      validStatuses.forEach((status) => {
+      for (const status of validStatuses) {
         const data = {
           filename: "test.ts",
           status,
@@ -369,7 +369,7 @@ describe("github.ts スキーマ", () => {
 
         const result = FileChangeSchema.safeParse(data);
         expect(result.success).toBe(true);
-      });
+      }
     });
   });
 

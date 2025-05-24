@@ -264,7 +264,7 @@ export class PRReviewWorkflow {
         const parsed = JSON.parse(jsonMatch[1]);
 
         if (parsed.issues && Array.isArray(parsed.issues)) {
-          return parsed.issues.map((issue: any, index: number) => ({
+          return parsed.issues.map((issue: { filename?: string; line?: number; title?: string; description?: string; severity?: string; category?: string; suggestion?: string; codeSnippet?: string; evidence?: string }, index: number) => ({
             id: `${agentName}-${index}`,
             filename: issue.filename || "unknown",
             line: issue.line,
@@ -288,7 +288,7 @@ export class PRReviewWorkflow {
   /**
    * エラー結果を作成
    */
-  private createErrorResult(agentName: string, error: any): AgentResult {
+  private createErrorResult(agentName: string, error: Error | unknown): AgentResult {
     return {
       agentName,
       executionTimeMs: 0,
@@ -305,7 +305,7 @@ export class PRReviewWorkflow {
   private async postReviewToGitHub(
     prInfo: PRInfo,
     reviewResult: ReviewResult,
-    summaryResult: any
+    summaryResult: { keyFindings?: string[]; nextSteps?: string[] } | unknown
   ): Promise<void> {
     try {
       // 主要なコメントを抽出（重要度順）
@@ -350,7 +350,7 @@ export class PRReviewWorkflow {
   /**
    * 要約コメントを作成
    */
-  private createSummaryComment(reviewResult: ReviewResult, summaryResult: any): string {
+  private createSummaryComment(reviewResult: ReviewResult, summaryResult: { keyFindings?: string[]; nextSteps?: string[] } | unknown): string {
     const { summary } = reviewResult;
 
     let comment = "## 🤖 AIレビュー結果\n\n";
@@ -368,20 +368,20 @@ export class PRReviewWorkflow {
     comment += "\n";
 
     // 主要な発見
-    if (summaryResult.keyFindings?.length > 0) {
+    if (summaryResult && typeof summaryResult === "object" && "keyFindings" in summaryResult && Array.isArray(summaryResult.keyFindings) && summaryResult.keyFindings.length > 0) {
       comment += "**主要な発見**:\n";
-      summaryResult.keyFindings.forEach((finding: string) => {
+      for (const finding of summaryResult.keyFindings) {
         comment += `- ${finding}\n`;
-      });
+      }
       comment += "\n";
     }
 
     // 推奨事項
-    if (summaryResult.nextSteps?.length > 0) {
+    if (summaryResult && typeof summaryResult === "object" && "nextSteps" in summaryResult && Array.isArray(summaryResult.nextSteps) && summaryResult.nextSteps.length > 0) {
       comment += "**推奨事項**:\n";
-      summaryResult.nextSteps.forEach((step: string) => {
+      for (const step of summaryResult.nextSteps) {
         comment += `- ${step}\n`;
-      });
+      }
     }
 
     return comment;

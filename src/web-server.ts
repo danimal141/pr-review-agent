@@ -37,7 +37,7 @@ app.get("/api/health", (req, res) => {
 });
 
 // PR分析エンドポイント（デモ用）
-app.post("/api/analyze", async (req: any, res: any) => {
+app.post("/api/analyze", async (req: { body: { code: string } }, res: { json: (data: unknown) => void; status: (code: number) => { json: (data: unknown) => void } }) => {
   try {
     const { code } = req.body;
 

@@ -107,7 +107,7 @@ export class StyleHelpers {
       // 変数宣言の命名規則チェック
       const variableDeclarations = content.match(/(const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/g);
       if (variableDeclarations) {
-        variableDeclarations.forEach((declaration) => {
+        for (const declaration of variableDeclarations) {
           const varName = declaration.split(/\s+/)[1];
 
           // スネークケースの使用（JavaScriptではキャメルケースが推奨）
@@ -125,12 +125,12 @@ export class StyleHelpers {
             suggestedFix = content.replace(varName, StyleHelpers.toCamelCase(varName));
 
             // 環境変数の部分は元に戻す
-            envVars.forEach((envVar) => {
+            for (const envVar of envVars) {
               suggestedFix = suggestedFix.replace(
                 envVar.replace(/[A-Z_]+/, StyleHelpers.toCamelCase(envVar.split(".")[2])),
                 envVar
               );
-            });
+            }
 
             issues.push({
               id: `naming-snake-case-${lineNumber}`,
@@ -183,13 +183,13 @@ export class StyleHelpers {
               codeSnippet: content,
             });
           }
-        });
+        }
       }
 
       // 関数命名規則チェック
       const functionDeclarations = content.match(/function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/g);
       if (functionDeclarations) {
-        functionDeclarations.forEach((declaration) => {
+        for (const declaration of functionDeclarations) {
           const funcName = declaration.split(/\s+/)[1];
 
           if (funcName.includes("_")) {
@@ -206,7 +206,7 @@ export class StyleHelpers {
               suggestedFix: content.replace(funcName, StyleHelpers.toCamelCase(funcName)),
             });
           }
-        });
+        }
       }
     });
 
@@ -564,10 +564,10 @@ export class StyleHelpers {
   private static categorizeByExtension(files: FileChange[]): Record<string, number> {
     const categories: Record<string, number> = {};
 
-    files.forEach((file) => {
+    for (const file of files) {
       const extension = file.filename.split(".").pop()?.toLowerCase() || "unknown";
       categories[extension] = (categories[extension] || 0) + 1;
-    });
+    }
 
     return categories;
   }

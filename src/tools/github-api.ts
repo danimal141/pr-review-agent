@@ -280,7 +280,7 @@ export class GitHubEventParser {
   /**
    * GitHub Webhookペイロードを解析してPRイベントを抽出
    */
-  static parsePREvent(payload: any): GitHubPREvent {
+  static parsePREvent(payload: { action?: string; number?: number; pull_request?: { head?: { sha?: string }; base?: { sha?: string } } } | unknown): GitHubPREvent {
     try {
       return {
         action: payload.action,

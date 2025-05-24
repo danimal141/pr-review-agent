@@ -268,13 +268,13 @@ export class SecurityScannerTool {
     const issues: SecurityIssue[] = [];
     const language = SecurityScannerTool.getFileLanguage(filename);
 
-    lines.forEach((line, index) => {
+    for (const [index, line] of lines.entries()) {
       const lineNumber = index + 1;
 
-      SecurityScannerTool.SECURITY_RULES.forEach((rule) => {
+      for (const rule of SecurityScannerTool.SECURITY_RULES) {
         // 言語固有のルールをチェック
         if (rule.languages && !rule.languages.includes(language)) {
-          return;
+          continue;
         }
 
         if (rule.pattern.test(line)) {
@@ -291,8 +291,8 @@ export class SecurityScannerTool {
             owasp: rule.owasp,
           });
         }
-      });
-    });
+      }
+    }
 
     // 重要度別の集計
     const bySeverity = {
@@ -320,12 +320,12 @@ export class SecurityScannerTool {
   static scanFiles(files: FileChange[]): SecurityScanResult[] {
     const results: SecurityScanResult[] = [];
 
-    files.forEach((file) => {
-      if (!file.patch) return;
+    for (const file of files) {
+      if (!file.patch) continue;
 
       // パッチから新しく追加された行のみを抽出
       const addedLines = SecurityScannerTool.extractAddedLines(file.patch);
-      if (addedLines.length === 0) return;
+      if (addedLines.length === 0) continue;
 
       const addedContent = addedLines.join("\n");
       const scanResult = SecurityScannerTool.scanFile(addedContent, file.filename);
@@ -333,7 +333,7 @@ export class SecurityScannerTool {
       if (scanResult.totalIssues > 0) {
         results.push(scanResult);
       }
-    });
+    }
 
     return results;
   }

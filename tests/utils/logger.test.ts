@@ -21,7 +21,7 @@ describe("logger.ts", () => {
       warn: vi.spyOn(console, "warn").mockImplementation(() => {}),
       debug: vi.spyOn(console, "debug").mockImplementation(() => {}),
       log: vi.spyOn(console, "log").mockImplementation(() => {}),
-    } as any;
+    } as Record<string, vi.MockInstance<Parameters<Console['info']>, ReturnType<Console['info']>>>;
 
     // モジュールキャッシュをクリア
     vi.resetModules();

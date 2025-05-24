@@ -181,9 +181,9 @@ export class SummaryAgentHelpers {
     const allComments = agentResults.flatMap((result) => result.comments);
     const categoryCount: Record<string, number> = {};
 
-    allComments.forEach((comment) => {
+    for (const comment of allComments) {
       categoryCount[comment.category] = (categoryCount[comment.category] || 0) + 1;
-    });
+    }
 
     return categoryCount;
   }
@@ -193,9 +193,14 @@ export class SummaryAgentHelpers {
    */
   private static calculateFileImpact(agentResults: AgentResult[]) {
     const allComments = agentResults.flatMap((result) => result.comments);
-    const fileImpact: Record<string, any> = {};
+    const fileImpact: Record<string, {
+      totalIssues: number;
+      bySeverity: { critical: number; error: number; warning: number; info: number };
+      categories: Set<string> | string[];
+      riskLevel: string;
+    }> = {};
 
-    allComments.forEach((comment) => {
+    for (const comment of allComments) {
       if (!fileImpact[comment.filename]) {
         fileImpact[comment.filename] = {
           totalIssues: 0,
@@ -208,14 +213,14 @@ export class SummaryAgentHelpers {
       fileImpact[comment.filename].totalIssues++;
       fileImpact[comment.filename].bySeverity[comment.severity]++;
       fileImpact[comment.filename].categories.add(comment.category);
-    });
+    }
 
     // カテゴリをセットから配列に変換し、リスクレベルを計算
-    Object.keys(fileImpact).forEach((filename) => {
+    for (const filename of Object.keys(fileImpact)) {
       const impact = fileImpact[filename];
       impact.categories = Array.from(impact.categories);
       impact.riskLevel = SummaryAgentHelpers.calculateFileRiskLevel(impact.bySeverity);
-    });
+    }
 
     return fileImpact;
   }
@@ -234,9 +239,9 @@ export class SummaryAgentHelpers {
   private static findMostProblematicFiles(comments: ReviewComment[], limit: number) {
     const fileCounts: Record<string, number> = {};
 
-    comments.forEach((comment) => {
+    for (const comment of comments) {
       fileCounts[comment.filename] = (fileCounts[comment.filename] || 0) + 1;
-    });
+    }
 
     return Object.entries(fileCounts)
       .sort(([, a], [, b]) => b - a)

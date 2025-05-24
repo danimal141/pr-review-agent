@@ -305,14 +305,14 @@ export class FileAnalyzerTool {
 
     let currentLine = 0;
 
-    lines.forEach((line) => {
+    for (const line of lines) {
       if (line.startsWith("@@")) {
         // 行番号情報を抽出
         const match = line.match(/@@ -(\d+),?\d* \+(\d+),?\d* @@/);
         if (match) {
           currentLine = Number.parseInt(match[2]);
         }
-        return;
+        continue;
       }
 
       if (line.startsWith("+") && !line.startsWith("+++")) {
@@ -331,7 +331,7 @@ export class FileAnalyzerTool {
       } else if (!line.startsWith("\\")) {
         currentLine++;
       }
-    });
+    }
 
     // 影響レベルを計算
     const totalChanges = addedLines.length + removedLines.length;
@@ -407,13 +407,13 @@ export class FileAnalyzerTool {
     const lines = patch.split("\n");
     const content: string[] = [];
 
-    lines.forEach((line) => {
+    for (const line of lines) {
       if (line.startsWith("+") && !line.startsWith("+++")) {
         content.push(line.substring(1));
       } else if (!line.startsWith("-") && !line.startsWith("@@") && !line.startsWith("\\")) {
         content.push(line);
       }
-    });
+    }
 
     return content.join("\n");
   }

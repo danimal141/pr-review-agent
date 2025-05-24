@@ -78,7 +78,7 @@ function loadConfig(): Config {
     },
 
     logging: {
-      level: (process.env.LOG_LEVEL as any) || "info",
+      level: (process.env.LOG_LEVEL as "debug" | "info" | "warn" | "error") || "info",
     },
 
     review: {

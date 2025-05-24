@@ -151,12 +151,12 @@ export class CodeMetricsTool {
   static calculateBatchMetrics(files: FileChange[]): CodeMetrics[] {
     const results: CodeMetrics[] = [];
 
-    files.forEach((file) => {
-      if (!file.patch) return;
+    for (const file of files) {
+      if (!file.patch) continue;
 
       // パッチから新しく追加されたコンテンツを抽出
       const addedContent = CodeMetricsTool.extractAddedContent(file.patch);
-      if (addedContent.trim().length === 0) return;
+      if (addedContent.trim().length === 0) continue;
 
       try {
         const metrics = CodeMetricsTool.calculateMetrics(addedContent, file.filename);
@@ -164,7 +164,7 @@ export class CodeMetricsTool {
       } catch (error) {
         console.warn(`メトリクス計算エラー: ${file.filename}`, error);
       }
-    });
+    }
 
     return results;
   }
@@ -183,7 +183,7 @@ export class CodeMetricsTool {
     let commentLines = 0;
     let blankLines = 0;
 
-    lines.forEach((line) => {
+    for (const line of lines) {
       const trimmed = line.trim();
 
       if (trimmed === "") {
@@ -193,7 +193,7 @@ export class CodeMetricsTool {
       } else {
         logicalLinesOfCode++;
       }
-    });
+    }
 
     return {
       linesOfCode,
@@ -330,7 +330,7 @@ export class CodeMetricsTool {
     let nestingLevel = 0;
     const lines = content.split("\n");
 
-    lines.forEach((line) => {
+    for (const line of lines) {
       const trimmed = line.trim();
 
       // ネストレベルを追跡
@@ -351,7 +351,7 @@ export class CodeMetricsTool {
       if (trimmed.includes("catch")) {
         complexity += 1 + nestingLevel;
       }
-    });
+    }
 
     return complexity;
   }
@@ -402,7 +402,7 @@ export class CodeMetricsTool {
     const lineMap = new Map<string, number>();
     let duplicateLines = 0;
 
-    lines.forEach((line) => {
+    for (const line of lines) {
       const trimmed = line.trim();
       if (trimmed.length > 10) {
         // 短い行は無視
@@ -412,7 +412,7 @@ export class CodeMetricsTool {
           duplicateLines++;
         }
       }
-    });
+    }
 
     return lines.length > 0 ? duplicateLines / lines.length : 0;
   }
@@ -423,7 +423,7 @@ export class CodeMetricsTool {
   private static identifyProblematicFunctions(functions: FunctionInfo[]): ProblematicFunction[] {
     const problematic: ProblematicFunction[] = [];
 
-    functions.forEach((fn) => {
+    for (const fn of functions) {
       // 複雑度が高い
       if (fn.complexity > 10) {
         problematic.push({
@@ -467,7 +467,7 @@ export class CodeMetricsTool {
           suggestion: "early return やガード句を使用してネストを減らしてください",
         });
       }
-    });
+    }
 
     return problematic;
   }
@@ -477,8 +477,8 @@ export class CodeMetricsTool {
    */
   private static generateSuggestions(
     filename: string,
-    basicMetrics: any,
-    complexityMetrics: any,
+    basicMetrics: { linesOfCode: number; commentLines: number },
+    complexityMetrics: { cyclomaticComplexity: number },
     functions: FunctionInfo[],
     problematicFunctions: ProblematicFunction[]
   ): QualitySuggestion[] {
@@ -521,7 +521,13 @@ export class CodeMetricsTool {
   /**
    * 品質スコアを計算（0-100）
    */
-  private static calculateQualityScore(metrics: any): number {
+  private static calculateQualityScore(metrics: {
+    cyclomaticComplexity: number;
+    linesOfCode: number;
+    problematicFunctionCount: number;
+    duplicateCodeRatio: number;
+    maintainabilityIndex: number
+  }): number {
     let score = 100;
 
     // 複雑度によるペナルティ
