@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
+import { z } from "zod";
 
 // 環境変数を読み込み
 dotenv.config();
@@ -35,7 +35,7 @@ const ConfigSchema = z.object({
 
   // ログ設定
   logging: z.object({
-    level: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+    level: z.enum(["debug", "info", "warn", "error"]).default("info"),
   }),
 
   // レビュー設定
@@ -55,7 +55,7 @@ export type Config = z.infer<typeof ConfigSchema>;
  */
 function loadConfig(): Config {
   const config = {
-    port: process.env.VOLTAGENT_PORT ? parseInt(process.env.VOLTAGENT_PORT, 10) : 3141,
+    port: process.env.VOLTAGENT_PORT ? Number.parseInt(process.env.VOLTAGENT_PORT, 10) : 3141,
 
     openai: {
       apiKey: process.env.OPENAI_API_KEY,
@@ -66,7 +66,7 @@ function loadConfig(): Config {
     },
 
     github: {
-      token: process.env.GITHUB_TOKEN || '',
+      token: process.env.GITHUB_TOKEN || "",
     },
 
     githubActions: {
@@ -78,15 +78,19 @@ function loadConfig(): Config {
     },
 
     logging: {
-      level: (process.env.LOG_LEVEL as any) || 'info',
+      level: (process.env.LOG_LEVEL as any) || "info",
     },
 
     review: {
-      maxFiles: process.env.REVIEW_MAX_FILES ? parseInt(process.env.REVIEW_MAX_FILES, 10) : 50,
-      maxLinesPerFile: process.env.REVIEW_MAX_LINES_PER_FILE ? parseInt(process.env.REVIEW_MAX_LINES_PER_FILE, 10) : 1000,
-      enableSecurityScan: process.env.ENABLE_SECURITY_SCAN !== 'false',
-      enableStyleCheck: process.env.ENABLE_STYLE_CHECK !== 'false',
-      enableCodeAnalysis: process.env.ENABLE_CODE_ANALYSIS !== 'false',
+      maxFiles: process.env.REVIEW_MAX_FILES
+        ? Number.parseInt(process.env.REVIEW_MAX_FILES, 10)
+        : 50,
+      maxLinesPerFile: process.env.REVIEW_MAX_LINES_PER_FILE
+        ? Number.parseInt(process.env.REVIEW_MAX_LINES_PER_FILE, 10)
+        : 1000,
+      enableSecurityScan: process.env.ENABLE_SECURITY_SCAN !== "false",
+      enableStyleCheck: process.env.ENABLE_STYLE_CHECK !== "false",
+      enableCodeAnalysis: process.env.ENABLE_CODE_ANALYSIS !== "false",
     },
   };
 
@@ -112,19 +116,19 @@ export function validateConfig(): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
   if (!config.github.token) {
-    errors.push('GITHUB_TOKEN環境変数が設定されていません');
+    errors.push("GITHUB_TOKEN環境変数が設定されていません");
   }
 
   if (!config.openai.apiKey && !config.anthropic.apiKey) {
-    errors.push('OPENAI_API_KEYまたはANTHROPIC_API_KEYのいずれかを設定してください');
+    errors.push("OPENAI_API_KEYまたはANTHROPIC_API_KEYのいずれかを設定してください");
   }
 
   if (isGitHubActions()) {
     if (!config.githubActions.repository) {
-      errors.push('GitHub Actions環境でGITHUB_REPOSITORYが設定されていません');
+      errors.push("GitHub Actions環境でGITHUB_REPOSITORYが設定されていません");
     }
     if (!config.githubActions.eventPath) {
-      errors.push('GitHub Actions環境でGITHUB_EVENT_PATHが設定されていません');
+      errors.push("GitHub Actions環境でGITHUB_EVENT_PATHが設定されていません");
     }
   }
 

@@ -1,16 +1,16 @@
-import 'dotenv/config';
-import { logger } from './utils/logger.js';
-import { createSupervisorAgent } from './agents/supervisor.js';
-import { createCodeAnalysisAgent } from './agents/code-analysis.js';
-import { createSecurityAgent } from './agents/security.js';
-import { createStyleAgent } from './agents/style.js';
-import { createSummaryAgent, SummaryAgentHelpers } from './agents/summary.js';
-import { FileAnalyzerTool } from './tools/file-analyzer.js';
-import { SecurityScannerTool } from './tools/security-scanner.js';
-import { CodeMetricsTool } from './tools/code-metrics.js';
-import { ReviewResult, AgentResult, ReviewComment } from './types/review.js';
-import { createGitHubAPITool } from './tools/github-api.js';
-import { GitHubPREvent, PRInfo } from './types/github.js';
+import "dotenv/config";
+import { createCodeAnalysisAgent } from "./agents/code-analysis.js";
+import { createSecurityAgent } from "./agents/security.js";
+import { createStyleAgent } from "./agents/style.js";
+import { SummaryAgentHelpers, createSummaryAgent } from "./agents/summary.js";
+import { createSupervisorAgent } from "./agents/supervisor.js";
+import { CodeMetricsTool } from "./tools/code-metrics.js";
+import { FileAnalyzerTool } from "./tools/file-analyzer.js";
+import { createGitHubAPITool } from "./tools/github-api.js";
+import { SecurityScannerTool } from "./tools/security-scanner.js";
+import type { GitHubPREvent, PRInfo } from "./types/github.js";
+import type { AgentResult, ReviewComment, ReviewResult } from "./types/review.js";
+import { logger } from "./utils/logger.js";
 
 /**
  * PRレビューワークフローのメインクラス
@@ -37,12 +37,12 @@ export class PRReviewWorkflow {
    */
   async reviewPR(prEvent: GitHubPREvent): Promise<ReviewResult> {
     const startTime = Date.now();
-    logger.info('PRReviewWorkflow', `PR #${prEvent.number} のレビューを開始`);
+    logger.info("PRReviewWorkflow", `PR #${prEvent.number} のレビューを開始`);
 
     try {
       // 1. PR情報を取得
       const prInfo = await this.getPRInfo(prEvent);
-      logger.info('PRReviewWorkflow', `${prInfo.files.length}ファイルの変更を検出`);
+      logger.info("PRReviewWorkflow", `${prInfo.files.length}ファイルの変更を検出`);
 
       // 2. 各専門エージェントを並行実行
       const agentResults = await this.runSpecializedAgents(prInfo);
@@ -74,11 +74,10 @@ export class PRReviewWorkflow {
       // 5. GitHub PRにコメント投稿
       await this.postReviewToGitHub(prInfo, reviewResult, summaryResult);
 
-      logger.info('PRReviewWorkflow', `PR #${prEvent.number} のレビュー完了`);
+      logger.info("PRReviewWorkflow", `PR #${prEvent.number} のレビュー完了`);
       return reviewResult;
-
     } catch (error) {
-      logger.error('PRReviewWorkflow', `レビュー実行エラー: ${error}`);
+      logger.error("PRReviewWorkflow", `レビュー実行エラー: ${error}`);
       throw error;
     }
   }
@@ -105,8 +104,8 @@ export class PRReviewWorkflow {
       const codeAnalysisResult = await this.runCodeAnalysisAgent(prInfo);
       results.push(codeAnalysisResult);
     } catch (error) {
-      logger.error('PRReviewWorkflow', `コード解析エラー: ${error}`);
-      results.push(this.createErrorResult('code-analysis', error));
+      logger.error("PRReviewWorkflow", `コード解析エラー: ${error}`);
+      results.push(this.createErrorResult("code-analysis", error));
     }
 
     // セキュリティエージェント
@@ -114,8 +113,8 @@ export class PRReviewWorkflow {
       const securityResult = await this.runSecurityAgent(prInfo);
       results.push(securityResult);
     } catch (error) {
-      logger.error('PRReviewWorkflow', `セキュリティ分析エラー: ${error}`);
-      results.push(this.createErrorResult('security', error));
+      logger.error("PRReviewWorkflow", `セキュリティ分析エラー: ${error}`);
+      results.push(this.createErrorResult("security", error));
     }
 
     // スタイルエージェント
@@ -123,8 +122,8 @@ export class PRReviewWorkflow {
       const styleResult = await this.runStyleAgent(prInfo);
       results.push(styleResult);
     } catch (error) {
-      logger.error('PRReviewWorkflow', `スタイル分析エラー: ${error}`);
-      results.push(this.createErrorResult('style', error));
+      logger.error("PRReviewWorkflow", `スタイル分析エラー: ${error}`);
+      results.push(this.createErrorResult("style", error));
     }
 
     return results;
@@ -151,22 +150,25 @@ export class PRReviewWorkflow {
         totalFiles: prInfo.files.length,
         totalAdditions: prInfo.files.reduce((sum, file) => sum + file.additions, 0),
         totalDeletions: prInfo.files.reduce((sum, file) => sum + file.deletions, 0),
-      }
+      },
     };
 
     const response = await this.codeAnalysisAgent.generateText(JSON.stringify(analysisData));
-    const comments = this.parseAgentResponse(response.text, 'code-analysis');
+    const comments = this.parseAgentResponse(response.text, "code-analysis");
 
     return {
-      agentName: 'code-analysis',
+      agentName: "code-analysis",
       executionTimeMs: Date.now() - startTime,
       success: true,
       comments,
       metadata: {
         filesAnalyzed: fileAnalysisResults.length,
-        averageComplexity: codeMetrics.reduce((sum, m) => sum + m.cyclomaticComplexity, 0) / Math.max(codeMetrics.length, 1),
-        qualityScore: codeMetrics.reduce((sum, m) => sum + m.qualityScore, 0) / Math.max(codeMetrics.length, 1),
-      }
+        averageComplexity:
+          codeMetrics.reduce((sum, m) => sum + m.cyclomaticComplexity, 0) /
+          Math.max(codeMetrics.length, 1),
+        qualityScore:
+          codeMetrics.reduce((sum, m) => sum + m.qualityScore, 0) / Math.max(codeMetrics.length, 1),
+      },
     };
   }
 
@@ -187,14 +189,14 @@ export class PRReviewWorkflow {
       prInfo: {
         title: prInfo.title,
         body: prInfo.body,
-      }
+      },
     };
 
     const response = await this.securityAgent.generateText(JSON.stringify(analysisData));
-    const comments = this.parseAgentResponse(response.text, 'security');
+    const comments = this.parseAgentResponse(response.text, "security");
 
     return {
-      agentName: 'security',
+      agentName: "security",
       executionTimeMs: Date.now() - startTime,
       success: true,
       comments,
@@ -202,8 +204,10 @@ export class PRReviewWorkflow {
         filesScanned: securityResults.length,
         totalSecurityIssues: securitySummary.totalIssues,
         riskLevel: securitySummary.riskLevel,
-        riskScore: securityResults.reduce((sum, r) => sum + r.riskScore, 0) / Math.max(securityResults.length, 1),
-      }
+        riskScore:
+          securityResults.reduce((sum, r) => sum + r.riskScore, 0) /
+          Math.max(securityResults.length, 1),
+      },
     };
   }
 
@@ -222,21 +226,21 @@ export class PRReviewWorkflow {
       prInfo: {
         title: prInfo.title,
         body: prInfo.body,
-      }
+      },
     };
 
     const response = await this.styleAgent.generateText(JSON.stringify(analysisData));
-    const comments = this.parseAgentResponse(response.text, 'style');
+    const comments = this.parseAgentResponse(response.text, "style");
 
     return {
-      agentName: 'style',
+      agentName: "style",
       executionTimeMs: Date.now() - startTime,
       success: true,
       comments,
       metadata: {
         filesAnalyzed: fileAnalysisResults.length,
-        styleIssues: comments.filter(c => c.category === 'style').length,
-      }
+        styleIssues: comments.filter((c) => c.category === "style").length,
+      },
     };
   }
 
@@ -256,18 +260,18 @@ export class PRReviewWorkflow {
     try {
       // JSON部分を抽出
       const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/);
-      if (jsonMatch && jsonMatch[1]) {
+      if (jsonMatch?.[1]) {
         const parsed = JSON.parse(jsonMatch[1]);
 
         if (parsed.issues && Array.isArray(parsed.issues)) {
           return parsed.issues.map((issue: any, index: number) => ({
             id: `${agentName}-${index}`,
-            filename: issue.filename || 'unknown',
+            filename: issue.filename || "unknown",
             line: issue.line,
-            category: issue.category || 'codeQuality',
-            severity: issue.severity || 'info',
-            title: issue.title || '問題が検出されました',
-            description: issue.description || '',
+            category: issue.category || "codeQuality",
+            severity: issue.severity || "info",
+            title: issue.title || "問題が検出されました",
+            description: issue.description || "",
             suggestion: issue.suggestion,
             codeSnippet: issue.evidence,
           }));
@@ -276,7 +280,7 @@ export class PRReviewWorkflow {
 
       return [];
     } catch (error) {
-      logger.error('PRReviewWorkflow', `${agentName}のレスポンス解析エラー: ${error}`);
+      logger.error("PRReviewWorkflow", `${agentName}のレスポンス解析エラー: ${error}`);
       return [];
     }
   }
@@ -291,17 +295,21 @@ export class PRReviewWorkflow {
       success: false,
       errorMessage: String(error),
       comments: [],
-      metadata: {}
+      metadata: {},
     };
   }
 
   /**
    * GitHub PRにレビューコメントを投稿
    */
-  private async postReviewToGitHub(prInfo: PRInfo, reviewResult: ReviewResult, summaryResult: any): Promise<void> {
+  private async postReviewToGitHub(
+    prInfo: PRInfo,
+    reviewResult: ReviewResult,
+    summaryResult: any
+  ): Promise<void> {
     try {
       // 主要なコメントを抽出（重要度順）
-      const allComments = reviewResult.agentResults.flatMap(result => result.comments);
+      const allComments = reviewResult.agentResults.flatMap((result) => result.comments);
       const prioritizedComments = allComments
         .sort((a, b) => this.getSeverityPriority(b.severity) - this.getSeverityPriority(a.severity))
         .slice(0, 10); // 最大10件まで
@@ -311,8 +319,8 @@ export class PRReviewWorkflow {
 
       // 行単位のコメント
       const lineComments = prioritizedComments
-        .filter(comment => comment.line)
-        .map(comment => ({
+        .filter((comment) => comment.line)
+        .map((comment) => ({
           path: comment.filename,
           line: comment.line!,
           body: this.formatReviewComment(comment),
@@ -324,14 +332,17 @@ export class PRReviewWorkflow {
         prInfo.repo,
         prInfo.number,
         summaryComment,
-        reviewResult.summary.recommendation === 'approve' ? 'APPROVE' :
-        reviewResult.summary.recommendation === 'requestChanges' ? 'REQUEST_CHANGES' : 'COMMENT',
+        reviewResult.summary.recommendation === "approve"
+          ? "APPROVE"
+          : reviewResult.summary.recommendation === "requestChanges"
+            ? "REQUEST_CHANGES"
+            : "COMMENT",
         lineComments
       );
 
-      logger.info('PRReviewWorkflow', `GitHub PRにレビューコメントを投稿しました`);
+      logger.info("PRReviewWorkflow", "GitHub PRにレビューコメントを投稿しました");
     } catch (error) {
-      logger.error('PRReviewWorkflow', `GitHub投稿エラー: ${error}`);
+      logger.error("PRReviewWorkflow", `GitHub投稿エラー: ${error}`);
       throw error;
     }
   }
@@ -342,7 +353,7 @@ export class PRReviewWorkflow {
   private createSummaryComment(reviewResult: ReviewResult, summaryResult: any): string {
     const { summary } = reviewResult;
 
-    let comment = `## 🤖 AIレビュー結果\n\n`;
+    let comment = "## 🤖 AIレビュー結果\n\n";
 
     // 全体スコア
     comment += `**全体スコア**: ${(summary.overallScore * 10).toFixed(1)}/100\n\n`;
@@ -354,20 +365,20 @@ export class PRReviewWorkflow {
     if (summary.bySeverity.warning > 0) comment += `- 🟡 警告: ${summary.bySeverity.warning}件\n`;
     if (summary.bySeverity.info > 0) comment += `- ℹ️ 情報: ${summary.bySeverity.info}件\n`;
 
-    comment += `\n`;
+    comment += "\n";
 
     // 主要な発見
     if (summaryResult.keyFindings?.length > 0) {
-      comment += `**主要な発見**:\n`;
+      comment += "**主要な発見**:\n";
       summaryResult.keyFindings.forEach((finding: string) => {
         comment += `- ${finding}\n`;
       });
-      comment += `\n`;
+      comment += "\n";
     }
 
     // 推奨事項
     if (summaryResult.nextSteps?.length > 0) {
-      comment += `**推奨事項**:\n`;
+      comment += "**推奨事項**:\n";
       summaryResult.nextSteps.forEach((step: string) => {
         comment += `- ${step}\n`;
       });
@@ -381,10 +392,10 @@ export class PRReviewWorkflow {
    */
   private formatReviewComment(comment: ReviewComment): string {
     const severityEmoji = {
-      critical: '🔴',
-      error: '🟠',
-      warning: '🟡',
-      info: 'ℹ️'
+      critical: "🔴",
+      error: "🟠",
+      warning: "🟡",
+      info: "ℹ️",
     };
 
     let formatted = `${severityEmoji[comment.severity]} **${comment.title}**\n\n`;
@@ -408,14 +419,14 @@ export class PRReviewWorkflow {
   /**
    * 推奨事項をマッピング
    */
-  private mapRecommendation(recommendation: string): 'approve' | 'requestChanges' | 'comment' {
+  private mapRecommendation(recommendation: string): "approve" | "requestChanges" | "comment" {
     switch (recommendation) {
-      case 'approve':
-        return 'approve';
-      case 'request_changes':
-        return 'requestChanges';
+      case "approve":
+        return "approve";
+      case "request_changes":
+        return "requestChanges";
       default:
-        return 'comment';
+        return "comment";
     }
   }
 }
@@ -425,20 +436,19 @@ export class PRReviewWorkflow {
  */
 export async function main() {
   try {
-    logger.info('Main', 'PRレビューエージェントを開始');
+    logger.info("Main", "PRレビューエージェントを開始");
 
     // 環境変数の確認
     if (!process.env.GITHUB_TOKEN) {
-      throw new Error('GITHUB_TOKEN環境変数が設定されていません');
+      throw new Error("GITHUB_TOKEN環境変数が設定されていません");
     }
 
     const workflow = new PRReviewWorkflow();
 
     // CLIの場合はここでPRイベントを処理
-    logger.info('Main', 'PRレビューエージェントの準備完了');
-
+    logger.info("Main", "PRレビューエージェントの準備完了");
   } catch (error) {
-    logger.error('Main', `初期化エラー: ${error}`);
+    logger.error("Main", `初期化エラー: ${error}`);
     process.exit(1);
   }
 }

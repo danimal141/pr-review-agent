@@ -1,22 +1,22 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * レビューの重要度レベル
  */
-export const ReviewSeveritySchema = z.enum(['info', 'warning', 'error', 'critical']);
+export const ReviewSeveritySchema = z.enum(["info", "warning", "error", "critical"]);
 export type ReviewSeverity = z.infer<typeof ReviewSeveritySchema>;
 
 /**
  * レビューカテゴリ
  */
 export const ReviewCategorySchema = z.enum([
-  'codeQuality',
-  'security',
-  'performance',
-  'style',
-  'bestPractices',
-  'bugs',
-  'maintainability'
+  "codeQuality",
+  "security",
+  "performance",
+  "style",
+  "bestPractices",
+  "bugs",
+  "maintainability",
 ]);
 export type ReviewCategory = z.infer<typeof ReviewCategorySchema>;
 
@@ -39,13 +39,13 @@ export const ReviewSeverityHelpers = {
   /** 重要度の日本語表示名 */
   getDisplayName: (severity: ReviewSeverity): string => {
     const names = {
-      info: '情報',
-      warning: '警告',
-      error: 'エラー',
-      critical: '重大'
+      info: "情報",
+      warning: "警告",
+      error: "エラー",
+      critical: "重大",
     };
     return names[severity];
-  }
+  },
 } as const;
 
 export const ReviewCategoryHelpers = {
@@ -55,16 +55,16 @@ export const ReviewCategoryHelpers = {
   /** カテゴリの日本語表示名 */
   getDisplayName: (category: ReviewCategory): string => {
     const names = {
-      codeQuality: 'コード品質',
-      security: 'セキュリティ',
-      performance: 'パフォーマンス',
-      style: 'スタイル',
-      bestPractices: 'ベストプラクティス',
-      bugs: 'バグ',
-      maintainability: '保守性'
+      codeQuality: "コード品質",
+      security: "セキュリティ",
+      performance: "パフォーマンス",
+      style: "スタイル",
+      bestPractices: "ベストプラクティス",
+      bugs: "バグ",
+      maintainability: "保守性",
     };
     return names[category];
-  }
+  },
 } as const;
 
 /**
@@ -118,7 +118,7 @@ export const ReviewResultSchema = z.object({
     }),
     byCategory: z.record(z.number()),
     overallScore: z.number().min(0).max(10), // 0-10のスコア
-    recommendation: z.enum(['approve', 'requestChanges', 'comment']),
+    recommendation: z.enum(["approve", "requestChanges", "comment"]),
   }),
   executionStats: z.object({
     totalTimeMs: z.number(),
@@ -142,7 +142,7 @@ export const ReviewSummarySchema = z.object({
   }),
   byCategory: z.record(z.number()),
   overallScore: z.number().min(0).max(100), // 0-100のスコア
-  recommendation: z.enum(['approve', 'request_changes', 'comment']),
+  recommendation: z.enum(["approve", "request_changes", "comment"]),
   keyFindings: z.array(z.string()),
   positiveAspects: z.array(z.string()),
   learningOpportunities: z.array(z.string()),

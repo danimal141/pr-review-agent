@@ -1,13 +1,18 @@
-import { Agent } from '@voltagent/core';
-import { VercelAIProvider } from '@voltagent/vercel-ai';
-import { openai } from '@ai-sdk/openai';
-import { z } from 'zod';
-import { ReviewResult, AgentResult, ReviewComment, ReviewSummary } from '../types/review.js';
-import { SecurityScanResult } from '../tools/security-scanner.js';
-import { FileAnalysisResult } from '../tools/file-analyzer.js';
-import { CodeMetrics } from '../tools/code-metrics.js';
-import { logger } from '../utils/logger.js';
-import { SummaryAgent } from '../types/agents.js';
+import { openai } from "@ai-sdk/openai";
+import { Agent } from "@voltagent/core";
+import { VercelAIProvider } from "@voltagent/vercel-ai";
+import { z } from "zod";
+import { CodeMetrics } from "../tools/code-metrics.js";
+import { FileAnalysisResult } from "../tools/file-analyzer.js";
+import { SecurityScanResult } from "../tools/security-scanner.js";
+import type { SummaryAgent } from "../types/agents.js";
+import {
+  type AgentResult,
+  type ReviewComment,
+  ReviewResult,
+  type ReviewSummary,
+} from "../types/review.js";
+import { logger } from "../utils/logger.js";
 
 /**
  * SummaryAgentの作成
@@ -20,7 +25,7 @@ import { SummaryAgent } from '../types/agents.js';
  */
 export function createSummaryAgent(): SummaryAgent {
   return new Agent({
-    name: 'summary-agent',
+    name: "summary-agent",
     instructions: `あなたはPRレビューの結果を統合・要約するSummaryAgentです。
 
 役割:
@@ -92,7 +97,7 @@ export function createSummaryAgent(): SummaryAgent {
 }
 \`\`\``,
     llm: new VercelAIProvider(),
-    model: openai('gpt-4o-mini'),
+    model: openai("gpt-4o-mini"),
   });
 }
 
@@ -100,7 +105,6 @@ export function createSummaryAgent(): SummaryAgent {
  * SummaryAgentのヘルパークラス
  */
 export class SummaryAgentHelpers {
-
   /**
    * 複数のエージェント結果を統合してサマリー用データを作成
    */
@@ -108,35 +112,35 @@ export class SummaryAgentHelpers {
     const consolidatedData = {
       timestamp: new Date().toISOString(),
       totalAgents: agentResults.length,
-      overallSuccess: agentResults.every(result => result.success),
+      overallSuccess: agentResults.every((result) => result.success),
 
       // エージェント別の結果要約
-      agentSummaries: agentResults.map(result => ({
+      agentSummaries: agentResults.map((result) => ({
         agentName: result.agentName,
         success: result.success,
         executionTime: result.executionTimeMs,
         commentCount: result.comments.length,
-        severityBreakdown: this.calculateSeverityBreakdown(result.comments),
+        severityBreakdown: SummaryAgentHelpers.calculateSeverityBreakdown(result.comments),
         keyIssues: result.comments
-          .filter(comment => comment.severity === 'critical' || comment.severity === 'error')
+          .filter((comment) => comment.severity === "critical" || comment.severity === "error")
           .slice(0, 3)
-          .map(comment => ({
+          .map((comment) => ({
             filename: comment.filename,
             title: comment.title,
             severity: comment.severity,
-            category: comment.category
+            category: comment.category,
           })),
-        metadata: result.metadata
+        metadata: result.metadata,
       })),
 
       // 統合メトリクス
-      aggregatedMetrics: this.calculateAggregatedMetrics(agentResults),
+      aggregatedMetrics: SummaryAgentHelpers.calculateAggregatedMetrics(agentResults),
 
       // カテゴリ別の問題分布
-      categoryDistribution: this.calculateCategoryDistribution(agentResults),
+      categoryDistribution: SummaryAgentHelpers.calculateCategoryDistribution(agentResults),
 
       // ファイル別の問題集約
-      fileImpact: this.calculateFileImpact(agentResults)
+      fileImpact: SummaryAgentHelpers.calculateFileImpact(agentResults),
     };
 
     return JSON.stringify(consolidatedData, null, 2);
@@ -147,10 +151,10 @@ export class SummaryAgentHelpers {
    */
   private static calculateSeverityBreakdown(comments: ReviewComment[]) {
     return {
-      critical: comments.filter(c => c.severity === 'critical').length,
-      error: comments.filter(c => c.severity === 'error').length,
-      warning: comments.filter(c => c.severity === 'warning').length,
-      info: comments.filter(c => c.severity === 'info').length,
+      critical: comments.filter((c) => c.severity === "critical").length,
+      error: comments.filter((c) => c.severity === "error").length,
+      warning: comments.filter((c) => c.severity === "warning").length,
+      info: comments.filter((c) => c.severity === "info").length,
     };
   }
 
@@ -158,15 +162,15 @@ export class SummaryAgentHelpers {
    * 統合メトリクスを計算
    */
   private static calculateAggregatedMetrics(agentResults: AgentResult[]) {
-    const allComments = agentResults.flatMap(result => result.comments);
+    const allComments = agentResults.flatMap((result) => result.comments);
 
     return {
       totalComments: allComments.length,
-      averageIssuesPerFile: this.calculateAverageIssuesPerFile(allComments),
-      mostProblematicFiles: this.findMostProblematicFiles(allComments, 5),
-      securityRiskScore: this.calculateSecurityRiskScore(allComments),
-      codeQualityScore: this.calculateCodeQualityScore(allComments),
-      maintainabilityScore: this.calculateMaintainabilityScore(agentResults)
+      averageIssuesPerFile: SummaryAgentHelpers.calculateAverageIssuesPerFile(allComments),
+      mostProblematicFiles: SummaryAgentHelpers.findMostProblematicFiles(allComments, 5),
+      securityRiskScore: SummaryAgentHelpers.calculateSecurityRiskScore(allComments),
+      codeQualityScore: SummaryAgentHelpers.calculateCodeQualityScore(allComments),
+      maintainabilityScore: SummaryAgentHelpers.calculateMaintainabilityScore(agentResults),
     };
   }
 
@@ -174,10 +178,10 @@ export class SummaryAgentHelpers {
    * カテゴリ別の問題分布を計算
    */
   private static calculateCategoryDistribution(agentResults: AgentResult[]) {
-    const allComments = agentResults.flatMap(result => result.comments);
+    const allComments = agentResults.flatMap((result) => result.comments);
     const categoryCount: Record<string, number> = {};
 
-    allComments.forEach(comment => {
+    allComments.forEach((comment) => {
       categoryCount[comment.category] = (categoryCount[comment.category] || 0) + 1;
     });
 
@@ -188,16 +192,16 @@ export class SummaryAgentHelpers {
    * ファイル別の影響度を計算
    */
   private static calculateFileImpact(agentResults: AgentResult[]) {
-    const allComments = agentResults.flatMap(result => result.comments);
+    const allComments = agentResults.flatMap((result) => result.comments);
     const fileImpact: Record<string, any> = {};
 
-    allComments.forEach(comment => {
+    allComments.forEach((comment) => {
       if (!fileImpact[comment.filename]) {
         fileImpact[comment.filename] = {
           totalIssues: 0,
           bySeverity: { critical: 0, error: 0, warning: 0, info: 0 },
           categories: new Set(),
-          riskLevel: 'low'
+          riskLevel: "low",
         };
       }
 
@@ -207,10 +211,10 @@ export class SummaryAgentHelpers {
     });
 
     // カテゴリをセットから配列に変換し、リスクレベルを計算
-    Object.keys(fileImpact).forEach(filename => {
+    Object.keys(fileImpact).forEach((filename) => {
       const impact = fileImpact[filename];
       impact.categories = Array.from(impact.categories);
-      impact.riskLevel = this.calculateFileRiskLevel(impact.bySeverity);
+      impact.riskLevel = SummaryAgentHelpers.calculateFileRiskLevel(impact.bySeverity);
     });
 
     return fileImpact;
@@ -220,7 +224,7 @@ export class SummaryAgentHelpers {
    * ファイルあたりの平均問題数を計算
    */
   private static calculateAverageIssuesPerFile(comments: ReviewComment[]): number {
-    const fileSet = new Set(comments.map(c => c.filename));
+    const fileSet = new Set(comments.map((c) => c.filename));
     return fileSet.size > 0 ? comments.length / fileSet.size : 0;
   }
 
@@ -230,7 +234,7 @@ export class SummaryAgentHelpers {
   private static findMostProblematicFiles(comments: ReviewComment[], limit: number) {
     const fileCounts: Record<string, number> = {};
 
-    comments.forEach(comment => {
+    comments.forEach((comment) => {
       fileCounts[comment.filename] = (fileCounts[comment.filename] || 0) + 1;
     });
 
@@ -244,10 +248,11 @@ export class SummaryAgentHelpers {
    * セキュリティリスクスコアを計算
    */
   private static calculateSecurityRiskScore(comments: ReviewComment[]): number {
-    const securityComments = comments.filter(c =>
-      c.category === 'security' ||
-      c.title.toLowerCase().includes('security') ||
-      c.title.toLowerCase().includes('vulnerability')
+    const securityComments = comments.filter(
+      (c) =>
+        c.category === "security" ||
+        c.title.toLowerCase().includes("security") ||
+        c.title.toLowerCase().includes("vulnerability")
     );
 
     if (securityComments.length === 0) return 0;
@@ -264,10 +269,11 @@ export class SummaryAgentHelpers {
    * コード品質スコアを計算
    */
   private static calculateCodeQualityScore(comments: ReviewComment[]): number {
-    const qualityComments = comments.filter(c =>
-      c.category === 'codeQuality' ||
-      c.category === 'maintainability' ||
-      c.category === 'performance'
+    const qualityComments = comments.filter(
+      (c) =>
+        c.category === "codeQuality" ||
+        c.category === "maintainability" ||
+        c.category === "performance"
     );
 
     if (qualityComments.length === 0) return 100;
@@ -285,8 +291,8 @@ export class SummaryAgentHelpers {
    */
   private static calculateMaintainabilityScore(agentResults: AgentResult[]): number {
     // コードメトリクスエージェントのメタデータから保守性指標を取得
-    const metricsResult = agentResults.find(result =>
-      result.agentName.includes('metrics') || result.agentName.includes('quality')
+    const metricsResult = agentResults.find(
+      (result) => result.agentName.includes("metrics") || result.agentName.includes("quality")
     );
 
     if (metricsResult?.metadata?.maintainabilityIndex) {
@@ -302,10 +308,10 @@ export class SummaryAgentHelpers {
    * ファイルのリスクレベルを計算
    */
   private static calculateFileRiskLevel(bySeverity: Record<string, number>): string {
-    if (bySeverity.critical > 0) return 'critical';
-    if (bySeverity.error > 2) return 'high';
-    if (bySeverity.error > 0 || bySeverity.warning > 5) return 'medium';
-    return 'low';
+    if (bySeverity.critical > 0) return "critical";
+    if (bySeverity.error > 2) return "high";
+    if (bySeverity.error > 0 || bySeverity.warning > 5) return "medium";
+    return "low";
   }
 
   /**
@@ -314,7 +320,7 @@ export class SummaryAgentHelpers {
   static parseSummaryResult(response: string, agentResults: AgentResult[]): ReviewSummary {
     try {
       const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/);
-      if (jsonMatch && jsonMatch[1]) {
+      if (jsonMatch?.[1]) {
         const parsed = JSON.parse(jsonMatch[1]);
 
         return {
@@ -327,34 +333,36 @@ export class SummaryAgentHelpers {
           },
           byCategory: parsed.summary.byCategory || {},
           overallScore: parsed.summary.overallScore || 0,
-          recommendation: this.mapRecommendation(parsed.summary.recommendation),
+          recommendation: SummaryAgentHelpers.mapRecommendation(parsed.summary.recommendation),
           keyFindings: parsed.summary.keyFindings || [],
           positiveAspects: parsed.positiveAspects || [],
           learningOpportunities: parsed.learningOpportunities || [],
-          nextSteps: parsed.nextSteps || []
+          nextSteps: parsed.nextSteps || [],
         };
       }
 
       // フォールバック: 基本的な要約を生成
-      return this.generateFallbackSummary(agentResults);
+      return SummaryAgentHelpers.generateFallbackSummary(agentResults);
     } catch (error) {
-      logger.error('SummaryAgent', `要約結果のパースに失敗: ${error}`);
-      return this.generateFallbackSummary(agentResults);
+      logger.error("SummaryAgent", `要約結果のパースに失敗: ${error}`);
+      return SummaryAgentHelpers.generateFallbackSummary(agentResults);
     }
   }
 
   /**
    * 推奨事項をマッピング
    */
-  private static mapRecommendation(recommendation: string): 'approve' | 'request_changes' | 'comment' {
+  private static mapRecommendation(
+    recommendation: string
+  ): "approve" | "request_changes" | "comment" {
     switch (recommendation?.toLowerCase()) {
-      case 'approve':
-        return 'approve';
-      case 'request_changes':
-      case 'request-changes':
-        return 'request_changes';
+      case "approve":
+        return "approve";
+      case "request_changes":
+      case "request-changes":
+        return "request_changes";
       default:
-        return 'comment';
+        return "comment";
     }
   }
 
@@ -362,27 +370,27 @@ export class SummaryAgentHelpers {
    * フォールバック用の基本要約を生成
    */
   private static generateFallbackSummary(agentResults: AgentResult[]): ReviewSummary {
-    const allComments = agentResults.flatMap(result => result.comments);
-    const bySeverity = this.calculateSeverityBreakdown(allComments);
-    const byCategory = this.calculateCategoryDistribution(agentResults);
+    const allComments = agentResults.flatMap((result) => result.comments);
+    const bySeverity = SummaryAgentHelpers.calculateSeverityBreakdown(allComments);
+    const byCategory = SummaryAgentHelpers.calculateCategoryDistribution(agentResults);
 
-    let recommendation: 'approve' | 'request_changes' | 'comment' = 'comment';
+    let recommendation: "approve" | "request_changes" | "comment" = "comment";
     if (bySeverity.critical > 0 || bySeverity.error > 3) {
-      recommendation = 'request_changes';
+      recommendation = "request_changes";
     } else if (allComments.length === 0) {
-      recommendation = 'approve';
+      recommendation = "approve";
     }
 
     return {
       totalComments: allComments.length,
       bySeverity,
       byCategory,
-      overallScore: this.calculateCodeQualityScore(allComments),
+      overallScore: SummaryAgentHelpers.calculateCodeQualityScore(allComments),
       recommendation,
       keyFindings: [`${allComments.length}件の問題が見つかりました`],
       positiveAspects: [],
       learningOpportunities: [],
-      nextSteps: allComments.length > 0 ? ['指摘された問題を確認してください'] : []
+      nextSteps: allComments.length > 0 ? ["指摘された問題を確認してください"] : [],
     };
   }
 }

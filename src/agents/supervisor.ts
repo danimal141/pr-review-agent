@@ -1,11 +1,11 @@
-import { Agent } from '@voltagent/core';
-import { VercelAIProvider } from '@voltagent/vercel-ai';
-import { openai } from '@ai-sdk/openai';
-import { z } from 'zod';
-import { GitHubPREvent, FileChange } from '../types/github.js';
-import { ReviewCategory, ReviewResult, AgentResult } from '../types/review.js';
-import { logger } from '../utils/logger.js';
-import { SupervisorAgent } from '../types/agents.js';
+import { openai } from "@ai-sdk/openai";
+import { Agent } from "@voltagent/core";
+import { VercelAIProvider } from "@voltagent/vercel-ai";
+import { z } from "zod";
+import type { SupervisorAgent } from "../types/agents.js";
+import type { FileChange, GitHubPREvent } from "../types/github.js";
+import { AgentResult, ReviewCategory, type ReviewResult } from "../types/review.js";
+import { logger } from "../utils/logger.js";
 
 /**
  * SupervisorAgentの作成
@@ -18,7 +18,7 @@ import { SupervisorAgent } from '../types/agents.js';
  */
 export function createSupervisorAgent(): SupervisorAgent {
   return new Agent({
-    name: 'supervisor-agent',
+    name: "supervisor-agent",
     instructions: `あなたはPRレビューを統括するSupervisorAgentです。
 
 役割:
@@ -59,7 +59,7 @@ PRの変更情報をJSON形式で受け取り、レビューコメントを生�
 }
 \`\`\``,
     llm: new VercelAIProvider(),
-    model: openai('gpt-4o-mini'),
+    model: openai("gpt-4o-mini"),
   });
 }
 
@@ -67,20 +67,21 @@ PRの変更情報をJSON形式で受け取り、レビューコメントを生�
  * SupervisorAgentのヘルパークラス
  */
 export class SupervisorAgentHelpers {
-
   /**
    * ファイルをタイプ別に分類
    */
   static categorizeFilesByType(files: FileChange[]): Record<string, number> {
     const categories: Record<string, number> = {};
 
-    files.forEach(file => {
-      const parts = file.filename.split('.');
+    for (const file of files) {
+      const parts = file.filename.split(".");
       // 拡張子がないか、ファイル名がドットで始まる場合は'unknown'
-      const extension = parts.length > 1 && !file.filename.startsWith('.') ?
-        parts.pop()?.toLowerCase() || 'unknown' : 'unknown';
+      const extension =
+        parts.length > 1 && !file.filename.startsWith(".")
+          ? parts.pop()?.toLowerCase() || "unknown"
+          : "unknown";
       categories[extension] = (categories[extension] || 0) + 1;
-    });
+    }
 
     return categories;
   }
@@ -88,31 +89,33 @@ export class SupervisorAgentHelpers {
   /**
    * 変更の影響レベルを計算
    */
-  static calculateImpactLevel(files: FileChange[]): 'low' | 'medium' | 'high' | 'critical' {
+  static calculateImpactLevel(files: FileChange[]): "low" | "medium" | "high" | "critical" {
     const totalChanges = files.reduce((sum, file) => sum + file.changes, 0);
-    const hasConfigChanges = files.some(file =>
-      file.filename.includes('config') ||
-      file.filename.includes('package.json') ||
-      file.filename.includes('.env')
+    const hasConfigChanges = files.some(
+      (file) =>
+        file.filename.includes("config") ||
+        file.filename.includes("package.json") ||
+        file.filename.includes(".env")
     );
 
-    if (totalChanges > 1000 || hasConfigChanges) return 'critical';
-    if (totalChanges > 500) return 'high';
-    if (totalChanges > 100) return 'medium';
-    return 'low';
+    if (totalChanges > 1000 || hasConfigChanges) return "critical";
+    if (totalChanges > 500) return "high";
+    if (totalChanges > 100) return "medium";
+    return "low";
   }
 
   /**
    * レビュー優先度を計算
    */
-  static calculateReviewPriority(files: FileChange[]): 'low' | 'medium' | 'high' | 'critical' {
-    const hasSecurityFiles = files.some(file =>
-      file.filename.includes('auth') ||
-      file.filename.includes('security') ||
-      file.filename.includes('password')
+  static calculateReviewPriority(files: FileChange[]): "low" | "medium" | "high" | "critical" {
+    const hasSecurityFiles = files.some(
+      (file) =>
+        file.filename.includes("auth") ||
+        file.filename.includes("security") ||
+        file.filename.includes("password")
     );
 
-    if (hasSecurityFiles) return 'critical';
+    if (hasSecurityFiles) return "critical";
     return SupervisorAgentHelpers.calculateImpactLevel(files);
   }
 
@@ -123,21 +126,21 @@ export class SupervisorAgentHelpers {
     const analysis = {
       prNumber: prEvent.number,
       title: prEvent.pullRequest.title,
-      body: prEvent.pullRequest.body || '',
+      body: prEvent.pullRequest.body || "",
       totalFiles: files.length,
       totalAdditions: files.reduce((sum, file) => sum + file.additions, 0),
       totalDeletions: files.reduce((sum, file) => sum + file.deletions, 0),
       filesByType: SupervisorAgentHelpers.categorizeFilesByType(files),
       impactLevel: SupervisorAgentHelpers.calculateImpactLevel(files),
       reviewPriority: SupervisorAgentHelpers.calculateReviewPriority(files),
-      files: files.map(file => ({
+      files: files.map((file) => ({
         filename: file.filename,
         status: file.status,
         additions: file.additions,
         deletions: file.deletions,
         changes: file.changes,
-        patch: file.patch?.substring(0, 2000) // パッチを2000文字に制限
-      }))
+        patch: file.patch?.substring(0, 2000), // パッチを2000文字に制限
+      })),
     };
 
     return JSON.stringify(analysis, null, 2);
@@ -150,42 +153,52 @@ export class SupervisorAgentHelpers {
     try {
       // JSON部分を抽出
       const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/);
-      if (jsonMatch && jsonMatch[1]) {
+      if (jsonMatch?.[1]) {
         const parsed = JSON.parse(jsonMatch[1]);
         return {
           prNumber: parsed.prNumber,
-          repository: '', // TODO: リポジトリ情報を追加
+          repository: "", // TODO: リポジトリ情報を追加
           reviewId: `review-${Date.now()}`,
           createdAt: new Date().toISOString(),
-          agentResults: [{
-            agentName: 'supervisor',
-            executionTimeMs: 0,
-            success: true,
-            comments: parsed.issues || [],
-            metadata: { overallScore: parsed.overallScore }
-          }],
+          agentResults: [
+            {
+              agentName: "supervisor",
+              executionTimeMs: 0,
+              success: true,
+              comments: parsed.issues || [],
+              metadata: { overallScore: parsed.overallScore },
+            },
+          ],
           summary: {
             totalComments: parsed.issues?.length || 0,
             bySeverity: {
-              info: parsed.issues?.filter((i: any) => i.severity === 'info').length || 0,
-              warning: parsed.issues?.filter((i: any) => i.severity === 'warning').length || 0,
-              error: parsed.issues?.filter((i: any) => i.severity === 'error').length || 0,
-              critical: parsed.issues?.filter((i: any) => i.severity === 'critical').length || 0,
+              info:
+                parsed.issues?.filter((i: { severity: string }) => i.severity === "info").length ||
+                0,
+              warning:
+                parsed.issues?.filter((i: { severity: string }) => i.severity === "warning")
+                  .length || 0,
+              error:
+                parsed.issues?.filter((i: { severity: string }) => i.severity === "error").length ||
+                0,
+              critical:
+                parsed.issues?.filter((i: { severity: string }) => i.severity === "critical")
+                  .length || 0,
             },
             byCategory: {},
             overallScore: parsed.overallScore || 0,
-            recommendation: 'comment' as const
+            recommendation: "comment" as const,
           },
           executionStats: {
             totalTimeMs: 0,
             filesAnalyzed: 0,
-            linesAnalyzed: 0
-          }
+            linesAnalyzed: 0,
+          },
         };
       }
       return null;
     } catch (error) {
-      logger.error('SupervisorAgent', `レビュー結果のパースに失敗: ${error}`);
+      logger.error("SupervisorAgent", `レビュー結果のパースに失敗: ${error}`);
       return null;
     }
   }

@@ -275,13 +275,28 @@ npm run type-check
 
 ### コード品質チェック
 
-```bash
-# Linting
-npm run lint
+このプロジェクトでは [Biome](https://biomejs.dev/) を使用してlintとformatを行っています。
 
-# Lint修正
+```bash
+# Linting（lint、format、import整理を一括チェック）
+npm run check
+
+# 自動修正
+npm run check:fix
+
+# Lintのみ
+npm run lint
 npm run lint:fix
+
+# Formatのみ
+npm run format
+npm run format:fix
 ```
+
+**VSCode での使用:**
+- [Biome VSCode拡張](https://marketplace.visualstudio.com/items?itemName=biomejs.biome)をインストール
+- 保存時の自動フォーマットが有効になります
+- 設定ファイル（`.vscode/settings.json`）で設定済み
 
 ### デバッグ
 

@@ -1,9 +1,9 @@
-import { Agent } from '@voltagent/core';
-import { VercelAIProvider } from '@voltagent/vercel-ai';
-import { openai } from '@ai-sdk/openai';
-import { FileChange } from '../types/github.js';
-import { ReviewComment, ReviewSeverity, ReviewCategory } from '../types/review.js';
-import { SecurityAgent } from '../types/agents.js';
+import { openai } from "@ai-sdk/openai";
+import { Agent } from "@voltagent/core";
+import { VercelAIProvider } from "@voltagent/vercel-ai";
+import type { SecurityAgent } from "../types/agents.js";
+import type { FileChange } from "../types/github.js";
+import type { ReviewCategory, ReviewComment, ReviewSeverity } from "../types/review.js";
 
 /**
  * SecurityAgentの作成
@@ -16,7 +16,7 @@ import { SecurityAgent } from '../types/agents.js';
  */
 export function createSecurityAgent(): SecurityAgent {
   return new Agent({
-    name: 'security-agent',
+    name: "security-agent",
     instructions: `あなたはサイバーセキュリティの専門家です。コードのセキュリティ脆弱性を検出し、改善提案を行います。
 
 ## 専門分野
@@ -86,7 +86,7 @@ export function createSecurityAgent(): SecurityAgent {
 
 日本語で分析し、具体的で実行可能なセキュリティ改善提案を提供してください。攻撃シナリオと影響を明確に説明してください。`,
     llm: new VercelAIProvider(),
-    model: openai('gpt-4o-mini'),
+    model: openai("gpt-4o-mini"),
   });
 }
 
@@ -99,38 +99,46 @@ export class SecurityHelpers {
    */
   static detectSQLInjection(patch: string, filename: string): ReviewComment[] {
     const issues: ReviewComment[] = [];
-    const lines = patch.split('\n');
+    const lines = patch.split("\n");
 
     lines.forEach((line, index) => {
-      if (!line.startsWith('+')) return;
+      if (!line.startsWith("+")) return;
 
       const content = line.substring(1).trim();
       const lineNumber = index + 1;
 
       // 文字列連結によるSQLクエリ
       const sqlConcatenationPatterns = [
-        /['"`]\s*\+\s*\w+\s*\+\s*['"`]/,  // "SELECT * FROM " + table + " WHERE"
-        /\$\{\w+\}/,                     // `SELECT * FROM ${table}`
-        /query\s*=\s*['"`].*\+/,         // query = "SELECT * FROM " +
-        /sql\s*=\s*['"`].*\+/            // sql = "SELECT * FROM " +
+        /['"`]\s*\+\s*\w+\s*\+\s*['"`]/, // "SELECT * FROM " + table + " WHERE"
+        /\$\{\w+\}/, // `SELECT * FROM ${table}`
+        /query\s*=\s*['"`].*\+/, // query = "SELECT * FROM " +
+        /sql\s*=\s*['"`].*\+/, // sql = "SELECT * FROM " +
       ];
 
-      sqlConcatenationPatterns.forEach(pattern => {
-                 if (pattern.test(content) && (content.toLowerCase().includes('select') || content.toLowerCase().includes('insert') || content.toLowerCase().includes('update') || content.toLowerCase().includes('delete'))) {
+      for (const pattern of sqlConcatenationPatterns) {
+        if (
+          pattern.test(content) &&
+          (content.toLowerCase().includes("select") ||
+            content.toLowerCase().includes("insert") ||
+            content.toLowerCase().includes("update") ||
+            content.toLowerCase().includes("delete"))
+        ) {
           issues.push({
             id: `sql-injection-${lineNumber}`,
             filename,
             line: lineNumber,
-            category: 'security' as ReviewCategory,
-            severity: 'critical' as ReviewSeverity,
-            title: 'SQLインジェクション脆弱性',
-            description: '文字列連結によるSQLクエリの構築はSQLインジェクション攻撃を可能にします。攻撃者は任意のSQLコードを実行し、データベースを操作できる可能性があります。',
-            suggestion: 'プリペアドステートメントまたはパラメータ化クエリを使用してください。',
+            category: "security" as ReviewCategory,
+            severity: "critical" as ReviewSeverity,
+            title: "SQLインジェクション脆弱性",
+            description:
+              "文字列連結によるSQLクエリの構築はSQLインジェクション攻撃を可能にします。攻撃者は任意のSQLコードを実行し、データベースを操作できる可能性があります。",
+            suggestion: "プリペアドステートメントまたはパラメータ化クエリを使用してください。",
             codeSnippet: content,
-            suggestedFix: 'プリペアドステートメント: db.prepare("SELECT * FROM users WHERE id = ?").get(userId)'
+            suggestedFix:
+              'プリペアドステートメント: db.prepare("SELECT * FROM users WHERE id = ?").get(userId)',
           });
         }
-      });
+      }
     });
 
     return issues;
@@ -141,59 +149,65 @@ export class SecurityHelpers {
    */
   static detectXSS(patch: string, filename: string): ReviewComment[] {
     const issues: ReviewComment[] = [];
-    const lines = patch.split('\n');
+    const lines = patch.split("\n");
 
     lines.forEach((line, index) => {
-      if (!line.startsWith('+')) return;
+      if (!line.startsWith("+")) return;
 
       const content = line.substring(1).trim();
       const lineNumber = index + 1;
 
       // innerHTML、outerHTMLの不安全な使用
-      if ((content.includes('innerHTML') || content.includes('outerHTML')) &&
-          !content.includes('textContent') && !content.includes('escape') &&
-          !content.includes('sanitize')) {
+      if (
+        (content.includes("innerHTML") || content.includes("outerHTML")) &&
+        !content.includes("textContent") &&
+        !content.includes("escape") &&
+        !content.includes("sanitize")
+      ) {
         issues.push({
           id: `xss-innerhtml-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'security' as ReviewCategory,
-          severity: 'error' as ReviewSeverity,
-          title: 'XSS（クロスサイトスクリプティング）脆弱性',
-          description: 'innerHTML/outerHTMLに未サニタイズのデータを設定するとXSS攻撃が可能になります。攻撃者は任意のJavaScriptコードを実行できます。',
-          suggestion: 'textContentを使用するか、DOMPurifyなどでサニタイズしてください。',
+          category: "security" as ReviewCategory,
+          severity: "error" as ReviewSeverity,
+          title: "XSS（クロスサイトスクリプティング）脆弱性",
+          description:
+            "innerHTML/outerHTMLに未サニタイズのデータを設定するとXSS攻撃が可能になります。攻撃者は任意のJavaScriptコードを実行できます。",
+          suggestion: "textContentを使用するか、DOMPurifyなどでサニタイズしてください。",
           codeSnippet: content,
-          suggestedFix: content.replace('innerHTML', 'textContent')
+          suggestedFix: content.replace("innerHTML", "textContent"),
         });
       }
 
       // React dangerouslySetInnerHTMLの使用
-      if (content.includes('dangerouslySetInnerHTML') && !content.includes('sanitize')) {
+      if (content.includes("dangerouslySetInnerHTML") && !content.includes("sanitize")) {
         issues.push({
           id: `xss-dangerous-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'security' as ReviewCategory,
-          severity: 'error' as ReviewSeverity,
-          title: 'XSS脆弱性 - dangerouslySetInnerHTML',
-          description: 'dangerouslySetInnerHTMLに未サニタイズのデータを渡すとXSS攻撃が可能になります。',
-          suggestion: 'データをサニタイズするか、代替手段を検討してください。',
-          codeSnippet: content
+          category: "security" as ReviewCategory,
+          severity: "error" as ReviewSeverity,
+          title: "XSS脆弱性 - dangerouslySetInnerHTML",
+          description:
+            "dangerouslySetInnerHTMLに未サニタイズのデータを渡すとXSS攻撃が可能になります。",
+          suggestion: "データをサニタイズするか、代替手段を検討してください。",
+          codeSnippet: content,
         });
       }
 
       // eval()の使用
-      if (content.includes('eval(') && !content.includes('//')) {
+      if (content.includes("eval(") && !content.includes("//")) {
         issues.push({
           id: `xss-eval-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'security' as ReviewCategory,
-          severity: 'critical' as ReviewSeverity,
-          title: 'コードインジェクション - eval使用',
-          description: 'eval()は任意のJavaScriptコードを実行するため、コードインジェクション攻撃の温床となります。',
-          suggestion: 'eval()の使用を避け、JSON.parse()や他の安全な代替手段を使用してください。',
-          codeSnippet: content
+          category: "security" as ReviewCategory,
+          severity: "critical" as ReviewSeverity,
+          title: "コードインジェクション - eval使用",
+          description:
+            "eval()は任意のJavaScriptコードを実行するため、コードインジェクション攻撃の温床となります。",
+          suggestion: "eval()の使用を避け、JSON.parse()や他の安全な代替手段を使用してください。",
+          codeSnippet: content,
         });
       }
     });
@@ -206,10 +220,10 @@ export class SecurityHelpers {
    */
   static detectAuthenticationIssues(patch: string, filename: string): ReviewComment[] {
     const issues: ReviewComment[] = [];
-    const lines = patch.split('\n');
+    const lines = patch.split("\n");
 
     lines.forEach((line, index) => {
-      if (!line.startsWith('+')) return;
+      if (!line.startsWith("+")) return;
 
       const content = line.substring(1).trim();
       const lineNumber = index + 1;
@@ -219,53 +233,57 @@ export class SecurityHelpers {
         /password\s*[:=]\s*['"`][^'"`]{3,}['"`]/i,
         /api[_-]?key\s*[:=]\s*['"`][^'"`]{10,}['"`]/i,
         /secret\s*[:=]\s*['"`][^'"`]{8,}['"`]/i,
-        /token\s*[:=]\s*['"`][^'"`]{10,}['"`]/i
+        /token\s*[:=]\s*['"`][^'"`]{10,}['"`]/i,
       ];
 
-      secretPatterns.forEach(pattern => {
+      for (const pattern of secretPatterns) {
         if (pattern.test(content)) {
           issues.push({
             id: `auth-hardcoded-${lineNumber}`,
             filename,
             line: lineNumber,
-            category: 'security' as ReviewCategory,
-            severity: 'critical' as ReviewSeverity,
-            title: 'ハードコードされた認証情報',
-            description: 'パスワード、APIキー、トークンがソースコードに直接記述されています。これらはバージョン管理システムに保存され、機密情報が漏洩する可能性があります。',
-            suggestion: '環境変数またはシークレット管理システムを使用してください。',
-            codeSnippet: content.replace(/['"`][^'"`]{3,}['"`]/, '***REDACTED***'),
-            suggestedFix: 'process.env.API_KEY または設定ファイルから読み込み'
+            category: "security" as ReviewCategory,
+            severity: "critical" as ReviewSeverity,
+            title: "ハードコードされた認証情報",
+            description:
+              "パスワード、APIキー、トークンがソースコードに直接記述されています。これらはバージョン管理システムに保存され、機密情報が漏洩する可能性があります。",
+            suggestion: "環境変数またはシークレット管理システムを使用してください。",
+            codeSnippet: content.replace(/['"`][^'"`]{3,}['"`]/, "***REDACTED***"),
+            suggestedFix: "process.env.API_KEY または設定ファイルから読み込み",
           });
         }
-      });
+      }
 
       // 弱いパスワードハッシュ化
-      if (content.includes('md5') || content.includes('sha1')) {
+      if (content.includes("md5") || content.includes("sha1")) {
         issues.push({
           id: `auth-weak-hash-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'security' as ReviewCategory,
-          severity: 'error' as ReviewSeverity,
-          title: '弱いハッシュアルゴリズム',
-          description: 'MD5やSHA1は暗号学的に脆弱で、レインボーテーブル攻撃や衝突攻撃に対して脆弱です。',
-          suggestion: 'bcrypt、scrypt、またはArgon2などの強力なパスワードハッシュ関数を使用してください。',
-          codeSnippet: content
+          category: "security" as ReviewCategory,
+          severity: "error" as ReviewSeverity,
+          title: "弱いハッシュアルゴリズム",
+          description:
+            "MD5やSHA1は暗号学的に脆弱で、レインボーテーブル攻撃や衝突攻撃に対して脆弱です。",
+          suggestion:
+            "bcrypt、scrypt、またはArgon2などの強力なパスワードハッシュ関数を使用してください。",
+          codeSnippet: content,
         });
       }
 
       // JWT秘密鍵の問題
-      if (content.includes('jwt') && content.includes('secret') && content.length < 50) {
+      if (content.includes("jwt") && content.includes("secret") && content.length < 50) {
         issues.push({
           id: `auth-jwt-weak-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'security' as ReviewCategory,
-          severity: 'warning' as ReviewSeverity,
-          title: '弱いJWT秘密鍵',
-          description: 'JWT秘密鍵が短すぎる可能性があります。短い秘密鍵はブルートフォース攻撃に対して脆弱です。',
-          suggestion: '最低でも256ビット（32文字）以上の強力な秘密鍵を使用してください。',
-          codeSnippet: content
+          category: "security" as ReviewCategory,
+          severity: "warning" as ReviewSeverity,
+          title: "弱いJWT秘密鍵",
+          description:
+            "JWT秘密鍵が短すぎる可能性があります。短い秘密鍵はブルートフォース攻撃に対して脆弱です。",
+          suggestion: "最低でも256ビット（32文字）以上の強力な秘密鍵を使用してください。",
+          codeSnippet: content,
         });
       }
     });
@@ -278,10 +296,10 @@ export class SecurityHelpers {
    */
   static detectDataExposure(patch: string, filename: string): ReviewComment[] {
     const issues: ReviewComment[] = [];
-    const lines = patch.split('\n');
+    const lines = patch.split("\n");
 
     lines.forEach((line, index) => {
-      if (!line.startsWith('+')) return;
+      if (!line.startsWith("+")) return;
 
       const content = line.substring(1).trim();
       const lineNumber = index + 1;
@@ -295,48 +313,60 @@ export class SecurityHelpers {
           id: `data-log-exposure-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'security' as ReviewCategory,
-          severity: 'warning' as ReviewSeverity,
-          title: 'ログでの機密情報露出',
-          description: 'パスワード、トークン、キーなどの機密情報がログに出力される可能性があります。ログファイルから機密情報が漏洩する危険があります。',
-          suggestion: '機密情報をログに出力しないよう修正するか、マスキング処理を追加してください。',
-          codeSnippet: content
+          category: "security" as ReviewCategory,
+          severity: "warning" as ReviewSeverity,
+          title: "ログでの機密情報露出",
+          description:
+            "パスワード、トークン、キーなどの機密情報がログに出力される可能性があります。ログファイルから機密情報が漏洩する危険があります。",
+          suggestion:
+            "機密情報をログに出力しないよう修正するか、マスキング処理を追加してください。",
+          codeSnippet: content,
         });
       }
 
       // エラーメッセージでの詳細情報露出
-      if (content.includes('throw new Error') &&
-          (content.includes('password') || content.includes('database') || content.includes('internal'))) {
+      if (
+        content.includes("throw new Error") &&
+        (content.includes("password") ||
+          content.includes("database") ||
+          content.includes("internal"))
+      ) {
         issues.push({
           id: `data-error-exposure-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'security' as ReviewCategory,
-          severity: 'warning' as ReviewSeverity,
-          title: 'エラーメッセージでの情報露出',
-          description: 'エラーメッセージに内部情報が含まれており、攻撃者にシステムの詳細を提供する可能性があります。',
-          suggestion: 'ユーザーには一般的なエラーメッセージを表示し、詳細はサーバーログのみに記録してください。',
-          codeSnippet: content
+          category: "security" as ReviewCategory,
+          severity: "warning" as ReviewSeverity,
+          title: "エラーメッセージでの情報露出",
+          description:
+            "エラーメッセージに内部情報が含まれており、攻撃者にシステムの詳細を提供する可能性があります。",
+          suggestion:
+            "ユーザーには一般的なエラーメッセージを表示し、詳細はサーバーログのみに記録してください。",
+          codeSnippet: content,
         });
       }
 
       // HTTPでの機密データ送信
-      if (content.includes('http://') && !content.includes('localhost')) {
+      if (content.includes("http://") && !content.includes("localhost")) {
         // HTTPの行を検出し、パッチ全体で機密データが含まれているかチェック
         const patchLower = patch.toLowerCase();
-        if (patchLower.includes('password') || patchLower.includes('token') ||
-            patchLower.includes('secret') || patchLower.includes('key')) {
+        if (
+          patchLower.includes("password") ||
+          patchLower.includes("token") ||
+          patchLower.includes("secret") ||
+          patchLower.includes("key")
+        ) {
           issues.push({
             id: `data-http-exposure-${lineNumber}`,
             filename,
             line: lineNumber,
-            category: 'security' as ReviewCategory,
-            severity: 'error' as ReviewSeverity,
-            title: 'HTTP経由での機密データ送信',
-            description: 'HTTPは暗号化されていないため、機密データが盗聴される可能性があります。',
-            suggestion: 'HTTPSを使用して通信を暗号化してください。',
+            category: "security" as ReviewCategory,
+            severity: "error" as ReviewSeverity,
+            title: "HTTP経由での機密データ送信",
+            description: "HTTPは暗号化されていないため、機密データが盗聴される可能性があります。",
+            suggestion: "HTTPSを使用して通信を暗号化してください。",
             codeSnippet: content,
-            suggestedFix: content.replace('http://', 'https://')
+            suggestedFix: content.replace("http://", "https://"),
           });
         }
       }
@@ -350,59 +380,67 @@ export class SecurityHelpers {
    */
   static detectConfigurationIssues(patch: string, filename: string): ReviewComment[] {
     const issues: ReviewComment[] = [];
-    const lines = patch.split('\n');
+    const lines = patch.split("\n");
 
     lines.forEach((line, index) => {
-      if (!line.startsWith('+')) return;
+      if (!line.startsWith("+")) return;
 
       const content = line.substring(1).trim();
       const lineNumber = index + 1;
 
       // CORS設定の問題
-      if (content.includes('cors') && content.includes('*')) {
+      if (content.includes("cors") && content.includes("*")) {
         issues.push({
           id: `config-cors-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'security' as ReviewCategory,
-          severity: 'warning' as ReviewSeverity,
-          title: '過度に許可的なCORS設定',
-          description: 'すべてのオリジンを許可するCORS設定（*）は、CSRF攻撃やデータ漏洩のリスクを高めます。',
-          suggestion: '必要な特定のオリジンのみを許可するよう設定を制限してください。',
-          codeSnippet: content
+          category: "security" as ReviewCategory,
+          severity: "warning" as ReviewSeverity,
+          title: "過度に許可的なCORS設定",
+          description:
+            "すべてのオリジンを許可するCORS設定（*）は、CSRF攻撃やデータ漏洩のリスクを高めます。",
+          suggestion: "必要な特定のオリジンのみを許可するよう設定を制限してください。",
+          codeSnippet: content,
         });
       }
 
       // デバッグモードの本番使用
-      if ((content.includes('debug') || content.includes('DEBUG')) &&
-          content.includes('true') && filename.includes('prod')) {
+      if (
+        (content.includes("debug") || content.includes("DEBUG")) &&
+        content.includes("true") &&
+        filename.includes("prod")
+      ) {
         issues.push({
           id: `config-debug-prod-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'security' as ReviewCategory,
-          severity: 'error' as ReviewSeverity,
-          title: '本番環境でのデバッグモード有効化',
-          description: '本番環境でデバッグモードが有効になっており、内部情報が露出する可能性があります。',
-          suggestion: '本番環境ではデバッグモードを無効にしてください。',
-          codeSnippet: content
+          category: "security" as ReviewCategory,
+          severity: "error" as ReviewSeverity,
+          title: "本番環境でのデバッグモード有効化",
+          description:
+            "本番環境でデバッグモードが有効になっており、内部情報が露出する可能性があります。",
+          suggestion: "本番環境ではデバッグモードを無効にしてください。",
+          codeSnippet: content,
         });
       }
 
       // 安全でないランダム性
-      if (content.includes('Math.random()') &&
-          (content.includes('token') || content.includes('id') || content.includes('session'))) {
+      if (
+        content.includes("Math.random()") &&
+        (content.includes("token") || content.includes("id") || content.includes("session"))
+      ) {
         issues.push({
           id: `config-weak-random-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'security' as ReviewCategory,
-          severity: 'warning' as ReviewSeverity,
-          title: '弱い乱数生成',
-          description: 'Math.random()は暗号学的に安全ではないため、セキュリティに関連する値の生成には適していません。',
-          suggestion: 'crypto.randomBytes()またはcrypto.getRandomValues()を使用してください。',
+          category: "security" as ReviewCategory,
+          severity: "warning" as ReviewSeverity,
+          title: "弱い乱数生成",
+          description:
+            "Math.random()は暗号学的に安全ではないため、セキュリティに関連する値の生成には適していません。",
+          suggestion: "crypto.randomBytes()またはcrypto.getRandomValues()を使用してください。",
           codeSnippet: content,
-          suggestedFix: 'crypto.randomBytes(32).toString("hex")'
+          suggestedFix: 'crypto.randomBytes(32).toString("hex")',
         });
       }
     });
@@ -417,15 +455,15 @@ export class SecurityHelpers {
     const securityData = {
       totalFiles: files.length,
       filesByType: SecurityHelpers.categorizeBySecurityRisk(files),
-      highRiskFiles: files.filter(file => SecurityHelpers.isHighRiskFile(file.filename)),
-      files: files.map(file => ({
+      highRiskFiles: files.filter((file) => SecurityHelpers.isHighRiskFile(file.filename)),
+      files: files.map((file) => ({
         filename: file.filename,
         status: file.status,
         additions: file.additions,
         deletions: file.deletions,
         securityRisk: SecurityHelpers.assessFileSecurityRisk(file.filename),
-        patch: file.patch?.substring(0, 2500) // セキュリティ分析用に2500文字制限
-      }))
+        patch: file.patch?.substring(0, 2500), // セキュリティ分析用に2500文字制限
+      })),
     };
 
     return JSON.stringify(securityData, null, 2);
@@ -436,15 +474,15 @@ export class SecurityHelpers {
    */
   private static categorizeBySecurityRisk(files: FileChange[]): Record<string, number> {
     const categories = {
-      'high-risk': 0,
-      'medium-risk': 0,
-      'low-risk': 0
+      "high-risk": 0,
+      "medium-risk": 0,
+      "low-risk": 0,
     };
 
-    files.forEach(file => {
+    for (const file of files) {
       const risk = SecurityHelpers.assessFileSecurityRisk(file.filename);
       categories[risk]++;
-    });
+    }
 
     return categories;
   }
@@ -452,31 +490,50 @@ export class SecurityHelpers {
   /**
    * ファイルのセキュリティリスクレベルを評価
    */
-  private static assessFileSecurityRisk(filename: string): 'high-risk' | 'medium-risk' | 'low-risk' {
+  private static assessFileSecurityRisk(
+    filename: string
+  ): "high-risk" | "medium-risk" | "low-risk" {
     const highRiskPatterns = [
-      /auth/i, /login/i, /password/i, /security/i, /crypto/i,
-      /token/i, /session/i, /admin/i, /api/i, /database/i,
-      /config/i, /env/i, /.env/, /middleware/i
+      /auth/i,
+      /login/i,
+      /password/i,
+      /security/i,
+      /crypto/i,
+      /token/i,
+      /session/i,
+      /admin/i,
+      /api/i,
+      /database/i,
+      /config/i,
+      /env/i,
+      /.env/,
+      /middleware/i,
     ];
 
     const mediumRiskPatterns = [
-      /user/i, /account/i, /profile/i, /settings/i,
-      /server/i, /client/i, /utils/i, /helpers/i
+      /user/i,
+      /account/i,
+      /profile/i,
+      /settings/i,
+      /server/i,
+      /client/i,
+      /utils/i,
+      /helpers/i,
     ];
 
-    if (highRiskPatterns.some(pattern => pattern.test(filename))) {
-      return 'high-risk';
+    if (highRiskPatterns.some((pattern) => pattern.test(filename))) {
+      return "high-risk";
     }
-    if (mediumRiskPatterns.some(pattern => pattern.test(filename))) {
-      return 'medium-risk';
+    if (mediumRiskPatterns.some((pattern) => pattern.test(filename))) {
+      return "medium-risk";
     }
-    return 'low-risk';
+    return "low-risk";
   }
 
   /**
    * 高リスクファイルかどうか判定
    */
   private static isHighRiskFile(filename: string): boolean {
-    return SecurityHelpers.assessFileSecurityRisk(filename) === 'high-risk';
+    return SecurityHelpers.assessFileSecurityRisk(filename) === "high-risk";
   }
 }

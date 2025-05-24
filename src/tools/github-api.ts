@@ -1,6 +1,6 @@
-import { Octokit } from '@octokit/rest';
-import { z } from 'zod';
-import { GitHubPREvent, FileChange, PRInfo } from '../types/github.js';
+import { Octokit } from "@octokit/rest";
+import { z } from "zod";
+import type { FileChange, GitHubPREvent, PRInfo } from "../types/github.js";
 
 /**
  * GitHub API操作ツール
@@ -60,7 +60,7 @@ export class GitHubAPITool {
         per_page: 100, // 最大100ファイル
       });
 
-      return files.map(file => ({
+      return files.map((file) => ({
         filename: file.filename,
         status: this.mapFileStatus(file.status),
         additions: file.additions,
@@ -78,12 +78,7 @@ export class GitHubAPITool {
   /**
    * ファイルの内容を取得
    */
-  async getFileContent(
-    owner: string,
-    repo: string,
-    path: string,
-    ref?: string
-  ): Promise<string> {
+  async getFileContent(owner: string, repo: string, path: string, ref?: string): Promise<string> {
     try {
       const { data } = await this.octokit.rest.repos.getContent({
         owner,
@@ -92,10 +87,10 @@ export class GitHubAPITool {
         ref,
       });
 
-      if ('content' in data && data.content) {
-        return Buffer.from(data.content, 'base64').toString('utf-8');
+      if ("content" in data && data.content) {
+        return Buffer.from(data.content, "base64").toString("utf-8");
       }
-      throw new Error('ファイル内容が見つかりません');
+      throw new Error("ファイル内容が見つかりません");
     } catch (error) {
       throw new Error(`ファイル内容の取得に失敗: ${error}`);
     }
@@ -112,7 +107,7 @@ export class GitHubAPITool {
     commitId?: string,
     path?: string,
     line?: number,
-    side: 'LEFT' | 'RIGHT' = 'RIGHT'
+    side: "LEFT" | "RIGHT" = "RIGHT"
   ): Promise<void> {
     try {
       if (path && line && commitId) {
@@ -149,12 +144,12 @@ export class GitHubAPITool {
     repo: string,
     prNumber: number,
     body: string,
-    event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT' = 'COMMENT',
+    event: "APPROVE" | "REQUEST_CHANGES" | "COMMENT" = "COMMENT",
     comments: Array<{
       path: string;
       line: number;
       body: string;
-      side?: 'LEFT' | 'RIGHT';
+      side?: "LEFT" | "RIGHT";
     }> = []
   ): Promise<void> {
     try {
@@ -164,11 +159,11 @@ export class GitHubAPITool {
         pull_number: prNumber,
         body,
         event,
-        comments: comments.map(comment => ({
+        comments: comments.map((comment) => ({
           path: comment.path,
           line: comment.line,
           body: comment.body,
-          side: comment.side || 'RIGHT',
+          side: comment.side || "RIGHT",
         })),
       });
     } catch (error) {
@@ -186,7 +181,7 @@ export class GitHubAPITool {
         repo,
         pull_number: prNumber,
         mediaType: {
-          format: 'diff',
+          format: "diff",
         },
       });
 
@@ -218,13 +213,15 @@ export class GitHubAPITool {
     owner: string,
     repo: string,
     prNumber: number
-  ): Promise<Array<{
-    id: number;
-    body: string;
-    path: string;
-    line: number;
-    user: string;
-  }>> {
+  ): Promise<
+    Array<{
+      id: number;
+      body: string;
+      path: string;
+      line: number;
+      user: string;
+    }>
+  > {
     try {
       const { data: comments } = await this.octokit.rest.pulls.listReviewComments({
         owner,
@@ -232,12 +229,12 @@ export class GitHubAPITool {
         pull_number: prNumber,
       });
 
-      return comments.map(comment => ({
+      return comments.map((comment) => ({
         id: comment.id,
         body: comment.body,
         path: comment.path,
         line: comment.line || 0,
-        user: comment.user?.login || 'unknown',
+        user: comment.user?.login || "unknown",
       }));
     } catch (error) {
       throw new Error(`既存レビューコメントの取得に失敗: ${error}`);
@@ -247,18 +244,18 @@ export class GitHubAPITool {
   /**
    * ファイルステータスをマッピング
    */
-  private mapFileStatus(status: string): 'added' | 'modified' | 'removed' | 'renamed' {
+  private mapFileStatus(status: string): "added" | "modified" | "removed" | "renamed" {
     switch (status) {
-      case 'added':
-        return 'added';
-      case 'modified':
-        return 'modified';
-      case 'removed':
-        return 'removed';
-      case 'renamed':
-        return 'renamed';
+      case "added":
+        return "added";
+      case "modified":
+        return "modified";
+      case "removed":
+        return "removed";
+      case "renamed":
+        return "renamed";
       default:
-        return 'modified';
+        return "modified";
     }
   }
 }
@@ -270,7 +267,7 @@ export function createGitHubAPITool(token?: string): GitHubAPITool {
   const githubToken = token || process.env.GITHUB_TOKEN;
 
   if (!githubToken) {
-    throw new Error('GITHUB_TOKEN環境変数が設定されていません');
+    throw new Error("GITHUB_TOKEN環境変数が設定されていません");
   }
 
   return new GitHubAPITool(githubToken);

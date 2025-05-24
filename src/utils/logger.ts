@@ -1,9 +1,9 @@
-import { config } from './config.js';
+import { config } from "./config.js";
 
 /**
  * ログレベル
  */
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+type LogLevel = "debug" | "info" | "warn" | "error";
 
 /**
  * ログレベルの優先度
@@ -32,7 +32,7 @@ interface LogMessage {
 class Logger {
   private minLevel: number;
 
-  constructor(level: LogLevel = 'info') {
+  constructor(level: LogLevel = "info") {
     this.minLevel = LOG_LEVELS[level];
   }
 
@@ -69,13 +69,13 @@ class Logger {
     const output = this.formatMessage(logMessage);
 
     switch (level) {
-      case 'error':
+      case "error":
         console.error(output);
         break;
-      case 'warn':
+      case "warn":
         console.warn(output);
         break;
-      case 'debug':
+      case "debug":
         console.debug(output);
         break;
       default:
@@ -91,8 +91,8 @@ class Logger {
 
     const levelStr = `[${level.toUpperCase()}]`;
     const timeStr = timestamp;
-    const componentStr = component ? `[${component}]` : '';
-    const dataStr = data ? `\n${JSON.stringify(data, null, 2)}` : '';
+    const componentStr = component ? `[${component}]` : "";
+    const dataStr = data ? `\n${JSON.stringify(data, null, 2)}` : "";
 
     return `${timeStr} ${levelStr} ${componentStr} ${message}${dataStr}`;
   }
@@ -101,28 +101,28 @@ class Logger {
    * DEBUGレベルのログ
    */
   debug(message: string, component?: string, data?: any): void {
-    this.log('debug', message, component, data);
+    this.log("debug", message, component, data);
   }
 
   /**
    * INFOレベルのログ
    */
   info(message: string, component?: string, data?: any): void {
-    this.log('info', message, component, data);
+    this.log("info", message, component, data);
   }
 
   /**
    * WARNレベルのログ
    */
   warn(message: string, component?: string, data?: any): void {
-    this.log('warn', message, component, data);
+    this.log("warn", message, component, data);
   }
 
   /**
    * ERRORレベルのログ
    */
   error(message: string, component?: string, data?: any): void {
-    this.log('error', message, component, data);
+    this.log("error", message, component, data);
   }
 
   /**
@@ -145,7 +145,7 @@ class Logger {
       const params = [];
       if (file) params.push(`file=${file}`);
       if (line) params.push(`line=${line}`);
-      const paramStr = params.length > 0 ? ` ${params.join(',')}` : '';
+      const paramStr = params.length > 0 ? ` ${params.join(",")}` : "";
       console.log(`::notice${paramStr}::${message}`);
     },
 
@@ -153,7 +153,7 @@ class Logger {
       const params = [];
       if (file) params.push(`file=${file}`);
       if (line) params.push(`line=${line}`);
-      const paramStr = params.length > 0 ? ` ${params.join(',')}` : '';
+      const paramStr = params.length > 0 ? ` ${params.join(",")}` : "";
       console.log(`::warning${paramStr}::${message}`);
     },
 
@@ -161,7 +161,7 @@ class Logger {
       const params = [];
       if (file) params.push(`file=${file}`);
       if (line) params.push(`line=${line}`);
-      const paramStr = params.length > 0 ? ` ${params.join(',')}` : '';
+      const paramStr = params.length > 0 ? ` ${params.join(",")}` : "";
       console.log(`::error${paramStr}::${message}`);
     },
 
@@ -170,7 +170,7 @@ class Logger {
     },
 
     endGroup: (): void => {
-      console.log('::endgroup::');
+      console.log("::endgroup::");
     },
   };
 }
@@ -189,6 +189,7 @@ export function createLogger(component: string) {
     info: (message: string, data?: any) => logger.info(message, component, data),
     warn: (message: string, data?: any) => logger.warn(message, component, data),
     error: (message: string, data?: any) => logger.error(message, component, data),
-    logError: (error: Error, additionalData?: any) => logger.logError(error, component, additionalData),
+    logError: (error: Error, additionalData?: any) =>
+      logger.logError(error, component, additionalData),
   };
 }

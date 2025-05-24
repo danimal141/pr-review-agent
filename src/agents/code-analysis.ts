@@ -1,9 +1,9 @@
-import { Agent } from '@voltagent/core';
-import { VercelAIProvider } from '@voltagent/vercel-ai';
-import { openai } from '@ai-sdk/openai';
-import { FileChange } from '../types/github.js';
-import { ReviewComment, ReviewSeverity, ReviewCategory } from '../types/review.js';
-import { CodeAnalysisAgent } from '../types/agents.js';
+import { openai } from "@ai-sdk/openai";
+import { Agent } from "@voltagent/core";
+import { VercelAIProvider } from "@voltagent/vercel-ai";
+import type { CodeAnalysisAgent } from "../types/agents.js";
+import type { FileChange } from "../types/github.js";
+import type { ReviewCategory, ReviewComment, ReviewSeverity } from "../types/review.js";
 
 /**
  * CodeAnalysisAgentの作成
@@ -17,7 +17,7 @@ import { CodeAnalysisAgent } from '../types/agents.js';
  */
 export function createCodeAnalysisAgent(): CodeAnalysisAgent {
   return new Agent({
-    name: 'code-analysis-agent',
+    name: "code-analysis-agent",
     instructions: `あなたはコード品質解析の専門家です。
 
 ## 専門分野
@@ -84,7 +84,7 @@ export function createCodeAnalysisAgent(): CodeAnalysisAgent {
 
 日本語で分析し、具体的で実行可能な改善提案を提供してください。`,
     llm: new VercelAIProvider(),
-    model: openai('gpt-4o-mini'),
+    model: openai("gpt-4o-mini"),
   });
 }
 
@@ -100,30 +100,43 @@ export class CodeAnalysisHelpers {
     nestingLevel: number;
     linesOfCode: number;
   } {
-    const lines = patch.split('\n').filter(line => line.startsWith('+') && !line.startsWith('+++'));
-    const code = lines.join('\n');
+    const lines = patch
+      .split("\n")
+      .filter((line) => line.startsWith("+") && !line.startsWith("+++"));
+    const code = lines.join("\n");
 
     // 簡易的な循環的複雑度計算
-    const complexityKeywords = ['if', 'else', 'while', 'for', 'switch', 'case', 'catch', '&&', '||', '?'];
+    const complexityKeywords = [
+      "if",
+      "else",
+      "while",
+      "for",
+      "switch",
+      "case",
+      "catch",
+      "&&",
+      "||",
+      "?",
+    ];
     let cyclomaticComplexity = 1; // ベース値
 
-    complexityKeywords.forEach(keyword => {
+    for (const keyword of complexityKeywords) {
       // 正規表現の特殊文字をエスケープ
-      const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const matches = code.match(new RegExp(`\\b${escapedKeyword}\\b`, 'g'));
+      const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const matches = code.match(new RegExp(`\\b${escapedKeyword}\\b`, "g"));
       if (matches) {
         cyclomaticComplexity += matches.length;
       }
-    });
+    }
 
     // ネストレベル計算（括弧の深さ）
     let nestingLevel = 0;
     let maxNesting = 0;
     for (const char of code) {
-      if (char === '{') {
+      if (char === "{") {
         nestingLevel++;
         maxNesting = Math.max(maxNesting, nestingLevel);
-      } else if (char === '}') {
+      } else if (char === "}") {
         nestingLevel--;
       }
     }
@@ -131,7 +144,7 @@ export class CodeAnalysisHelpers {
     return {
       cyclomaticComplexity,
       nestingLevel: maxNesting,
-      linesOfCode: lines.length
+      linesOfCode: lines.length,
     };
   }
 
@@ -140,56 +153,59 @@ export class CodeAnalysisHelpers {
    */
   static detectPerformanceIssues(patch: string, filename: string): ReviewComment[] {
     const issues: ReviewComment[] = [];
-    const lines = patch.split('\n');
+    const lines = patch.split("\n");
 
     lines.forEach((line, index) => {
-      if (!line.startsWith('+')) return;
+      if (!line.startsWith("+")) return;
 
       const content = line.substring(1).trim();
       const lineNumber = index + 1;
 
       // O(n²)ループの検出
-      if (content.includes('for') && lines.slice(index + 1, index + 10).some(l => l.includes('for'))) {
+      if (
+        content.includes("for") &&
+        lines.slice(index + 1, index + 10).some((l) => l.includes("for"))
+      ) {
         issues.push({
           id: `perf-nested-loop-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'performance' as ReviewCategory,
-          severity: 'warning' as ReviewSeverity,
-          title: 'ネストしたループによるパフォーマンス問題',
-          description: 'ネストしたループがO(n²)またはそれ以上の計算量を生成する可能性があります。',
-          suggestion: 'Map、Set、またはより効率的なアルゴリズムの使用を検討してください。',
-          codeSnippet: content
+          category: "performance" as ReviewCategory,
+          severity: "warning" as ReviewSeverity,
+          title: "ネストしたループによるパフォーマンス問題",
+          description: "ネストしたループがO(n²)またはそれ以上の計算量を生成する可能性があります。",
+          suggestion: "Map、Set、またはより効率的なアルゴリズムの使用を検討してください。",
+          codeSnippet: content,
         });
       }
 
       // 不要な配列操作の検出
-      if (content.includes('.map(') && content.includes('.filter(')) {
+      if (content.includes(".map(") && content.includes(".filter(")) {
         issues.push({
           id: `perf-chained-array-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'performance' as ReviewCategory,
-          severity: 'info' as ReviewSeverity,
-          title: '配列操作の最適化',
-          description: 'map()とfilter()のチェーンは複数回配列を走査します。',
-          suggestion: 'reduce()を使用して単一パスで処理することを検討してください。',
-          codeSnippet: content
+          category: "performance" as ReviewCategory,
+          severity: "info" as ReviewSeverity,
+          title: "配列操作の最適化",
+          description: "map()とfilter()のチェーンは複数回配列を走査します。",
+          suggestion: "reduce()を使用して単一パスで処理することを検討してください。",
+          codeSnippet: content,
         });
       }
 
       // 同期的なファイル操作の検出
-      if (content.includes('readFileSync') || content.includes('writeFileSync')) {
+      if (content.includes("readFileSync") || content.includes("writeFileSync")) {
         issues.push({
           id: `perf-sync-file-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'performance' as ReviewCategory,
-          severity: 'warning' as ReviewSeverity,
-          title: '同期的ファイル操作',
-          description: '同期的ファイル操作はメインスレッドをブロックします。',
-          suggestion: '非同期版（readFile, writeFile）の使用を検討してください。',
-          codeSnippet: content
+          category: "performance" as ReviewCategory,
+          severity: "warning" as ReviewSeverity,
+          title: "同期的ファイル操作",
+          description: "同期的ファイル操作はメインスレッドをブロックします。",
+          suggestion: "非同期版（readFile, writeFile）の使用を検討してください。",
+          codeSnippet: content,
         });
       }
     });
@@ -202,62 +218,68 @@ export class CodeAnalysisHelpers {
    */
   static detectPotentialBugs(patch: string, filename: string): ReviewComment[] {
     const issues: ReviewComment[] = [];
-    const lines = patch.split('\n');
+    const lines = patch.split("\n");
 
     lines.forEach((line, index) => {
-      if (!line.startsWith('+')) return;
+      if (!line.startsWith("+")) return;
 
       const content = line.substring(1).trim();
       const lineNumber = index + 1;
 
       // null/undefinedチェック漏れ
-      if (content.includes('.') && !content.includes('?.') &&
-          !content.includes('null') && !content.includes('undefined')) {
+      if (
+        content.includes(".") &&
+        !content.includes("?.") &&
+        !content.includes("null") &&
+        !content.includes("undefined")
+      ) {
         const hasPropertyAccess = content.match(/\w+\.\w+/);
         if (hasPropertyAccess) {
           issues.push({
             id: `bug-null-check-${lineNumber}`,
             filename,
             line: lineNumber,
-            category: 'bugs' as ReviewCategory,
-            severity: 'warning' as ReviewSeverity,
-            title: 'null/undefinedチェック漏れの可能性',
-            description: 'オブジェクトのプロパティアクセス前にnull/undefinedチェックが必要な可能性があります。',
-            suggestion: 'オプショナルチェーニング（?.）またはnullチェックの追加を検討してください。',
+            category: "bugs" as ReviewCategory,
+            severity: "warning" as ReviewSeverity,
+            title: "null/undefinedチェック漏れの可能性",
+            description:
+              "オブジェクトのプロパティアクセス前にnull/undefinedチェックが必要な可能性があります。",
+            suggestion:
+              "オプショナルチェーニング（?.）またはnullチェックの追加を検討してください。",
             codeSnippet: content,
-            suggestedFix: content.replace(/(\w+)\.(\w+)/, '$1?.$2')
+            suggestedFix: content.replace(/(\w+)\.(\w+)/, "$1?.$2"),
           });
         }
       }
 
       // 配列の境界外アクセス
-      if (content.includes('[') && content.includes(']') && !content.includes('?.')) {
+      if (content.includes("[") && content.includes("]") && !content.includes("?.")) {
         issues.push({
           id: `bug-array-bounds-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'bugs' as ReviewCategory,
-          severity: 'info' as ReviewSeverity,
-          title: '配列境界チェックの検討',
-          description: '配列の境界外アクセスの可能性があります。',
-          suggestion: 'インデックスの範囲チェックまたは配列長の確認を追加してください。',
-          codeSnippet: content
+          category: "bugs" as ReviewCategory,
+          severity: "info" as ReviewSeverity,
+          title: "配列境界チェックの検討",
+          description: "配列の境界外アクセスの可能性があります。",
+          suggestion: "インデックスの範囲チェックまたは配列長の確認を追加してください。",
+          codeSnippet: content,
         });
       }
 
       // ==の使用（厳密等価でない）
-      if (content.includes('==') && !content.includes('===')) {
+      if (content.includes("==") && !content.includes("===")) {
         issues.push({
           id: `bug-equality-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'codeQuality' as ReviewCategory,
-          severity: 'warning' as ReviewSeverity,
-          title: '厳密等価演算子の使用推奨',
-          description: '==は型強制を行うため、予期しない結果になる可能性があります。',
-          suggestion: '厳密等価演算子（===）の使用を推奨します。',
+          category: "codeQuality" as ReviewCategory,
+          severity: "warning" as ReviewSeverity,
+          title: "厳密等価演算子の使用推奨",
+          description: "==は型強制を行うため、予期しない結果になる可能性があります。",
+          suggestion: "厳密等価演算子（===）の使用を推奨します。",
           codeSnippet: content,
-          suggestedFix: content.replace(/([^!=])==([^=])/g, '$1===$2')
+          suggestedFix: content.replace(/([^!=])==([^=])/g, "$1===$2"),
         });
       }
     });
@@ -270,10 +292,10 @@ export class CodeAnalysisHelpers {
    */
   static evaluateCodeQuality(patch: string, filename: string): ReviewComment[] {
     const issues: ReviewComment[] = [];
-    const lines = patch.split('\n');
+    const lines = patch.split("\n");
 
     lines.forEach((line, index) => {
-      if (!line.startsWith('+')) return;
+      if (!line.startsWith("+")) return;
 
       const content = line.substring(1).trim();
       const lineNumber = index + 1;
@@ -284,43 +306,47 @@ export class CodeAnalysisHelpers {
           id: `quality-line-length-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'codeQuality' as ReviewCategory,
-          severity: 'info' as ReviewSeverity,
-          title: '行の長さが推奨値を超過',
+          category: "codeQuality" as ReviewCategory,
+          severity: "info" as ReviewSeverity,
+          title: "行の長さが推奨値を超過",
           description: `行の長さが${content.length}文字です。120文字以下が推奨されます。`,
-          suggestion: '行を分割するか、変数への代入を検討してください。',
-          codeSnippet: content
+          suggestion: "行を分割するか、変数への代入を検討してください。",
+          codeSnippet: content,
         });
       }
 
       // コメントなし複雑関数
-      if (content.includes('function') && !lines[index - 1]?.includes('//') && !lines[index - 1]?.includes('/*')) {
+      if (
+        content.includes("function") &&
+        !lines[index - 1]?.includes("//") &&
+        !lines[index - 1]?.includes("/*")
+      ) {
         issues.push({
           id: `quality-function-comment-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'codeQuality' as ReviewCategory,
-          severity: 'info' as ReviewSeverity,
-          title: '関数コメントの追加推奨',
-          description: '関数の目的や使用方法を説明するコメントがありません。',
-          suggestion: 'JSDocスタイルのコメントを追加することを推奨します。',
-          codeSnippet: content
+          category: "codeQuality" as ReviewCategory,
+          severity: "info" as ReviewSeverity,
+          title: "関数コメントの追加推奨",
+          description: "関数の目的や使用方法を説明するコメントがありません。",
+          suggestion: "JSDocスタイルのコメントを追加することを推奨します。",
+          codeSnippet: content,
         });
       }
 
       // マジックナンバー
       const magicNumbers = content.match(/\b\d{2,}\b/g);
-      if (magicNumbers && !content.includes('const') && !content.includes('//')) {
+      if (magicNumbers && !content.includes("const") && !content.includes("//")) {
         issues.push({
           id: `quality-magic-number-${lineNumber}`,
           filename,
           line: lineNumber,
-          category: 'codeQuality' as ReviewCategory,
-          severity: 'info' as ReviewSeverity,
-          title: 'マジックナンバーの定数化推奨',
-          description: 'ハードコードされた数値は定数として定義することを推奨します。',
-          suggestion: '意味のある名前を持つ定数として定義してください。',
-          codeSnippet: content
+          category: "codeQuality" as ReviewCategory,
+          severity: "info" as ReviewSeverity,
+          title: "マジックナンバーの定数化推奨",
+          description: "ハードコードされた数値は定数として定義することを推奨します。",
+          suggestion: "意味のある名前を持つ定数として定義してください。",
+          codeSnippet: content,
         });
       }
     });
@@ -335,14 +361,14 @@ export class CodeAnalysisHelpers {
     const analysisData = {
       totalFiles: files.length,
       filesByExtension: CodeAnalysisHelpers.categorizeByExtension(files),
-      files: files.map(file => ({
+      files: files.map((file) => ({
         filename: file.filename,
         status: file.status,
         additions: file.additions,
         deletions: file.deletions,
         complexity: file.patch ? CodeAnalysisHelpers.evaluateComplexity(file.patch) : null,
-        patch: file.patch?.substring(0, 3000) // 3000文字に制限
-      }))
+        patch: file.patch?.substring(0, 3000), // 3000文字に制限
+      })),
     };
 
     return JSON.stringify(analysisData, null, 2);
@@ -354,16 +380,16 @@ export class CodeAnalysisHelpers {
   private static categorizeByExtension(files: FileChange[]): Record<string, number> {
     const categories: Record<string, number> = {};
 
-    files.forEach(file => {
+    for (const file of files) {
       let extension: string;
-      if (file.filename.toLowerCase() === 'dockerfile') {
-        extension = 'dockerfile';
+      if (file.filename.toLowerCase() === "dockerfile") {
+        extension = "dockerfile";
       } else {
-        const parts = file.filename.split('.');
-        extension = parts.length > 1 ? parts.pop()!.toLowerCase() : 'unknown';
+        const parts = file.filename.split(".");
+        extension = parts.length > 1 ? parts.pop()!.toLowerCase() : "unknown";
       }
       categories[extension] = (categories[extension] || 0) + 1;
-    });
+    }
 
     return categories;
   }

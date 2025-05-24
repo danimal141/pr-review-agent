@@ -1,6 +1,6 @@
-import { Agent } from '@voltagent/core';
-import { VercelAIProvider } from '@voltagent/vercel-ai';
-import { LanguageModelV1 } from '@ai-sdk/provider';
+import type { LanguageModelV1 } from "@ai-sdk/provider";
+import type { Agent } from "@voltagent/core";
+import type { VercelAIProvider } from "@voltagent/vercel-ai";
 
 /**
  * エージェント設定の基本型

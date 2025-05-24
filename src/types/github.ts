@@ -1,10 +1,10 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * GitHub PRイベントの型定義
  */
 export const GitHubPREventSchema = z.object({
-  action: z.enum(['opened', 'synchronize', 'reopened']),
+  action: z.enum(["opened", "synchronize", "reopened"]),
   number: z.number(),
   pullRequest: z.object({
     id: z.number(),
@@ -40,7 +40,7 @@ export type GitHubPREvent = z.infer<typeof GitHubPREventSchema>;
  */
 export const FileChangeSchema = z.object({
   filename: z.string(),
-  status: z.enum(['added', 'modified', 'removed', 'renamed']),
+  status: z.enum(["added", "modified", "removed", "renamed"]),
   additions: z.number(),
   deletions: z.number(),
   changes: z.number(),

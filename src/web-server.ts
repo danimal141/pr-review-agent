@@ -1,14 +1,14 @@
-import express from 'express';
-import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { CodeAnalyzer } from './code-analyzer.js';
-import { logger } from './utils/logger';
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import cors from "cors";
+import express from "express";
+import { CodeAnalyzer } from "./code-analyzer.js";
+import { logger } from "./utils/logger";
 
 // VoltAgentのデバッグログを無効化（「Agent not found」メッセージを非表示）
 const originalDebug = console.debug;
 console.debug = (...args) => {
-  if (args[0] && typeof args[0] === 'string' && args[0].includes('[AgentEventEmitter]')) {
+  if (args[0] && typeof args[0] === "string" && args[0].includes("[AgentEventEmitter]")) {
     return; // AgentEventEmitterのデバッグログを無視
   }
   originalDebug.apply(console, args);
@@ -24,41 +24,46 @@ const PORT = process.env.PORT || 3000;
 // ミドルウェア設定
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.static(path.join(__dirname, "../public")));
 
 // ヘルスチェック
-app.get('/api/health', (req, res) => {
+app.get("/api/health", (req, res) => {
   res.json({
-    status: 'ok',
-    service: 'PR Review Agent',
-    version: '0.1.0',
-    timestamp: new Date().toISOString()
+    status: "ok",
+    service: "PR Review Agent",
+    version: "0.1.0",
+    timestamp: new Date().toISOString(),
   });
 });
 
 // PR分析エンドポイント（デモ用）
-app.post('/api/analyze', async (req: any, res: any) => {
+app.post("/api/analyze", async (req: any, res: any) => {
   try {
     const { code } = req.body;
 
     if (!code) {
-      return res.status(400).json({ error: 'コードが提供されていません' });
+      return res.status(400).json({ error: "コードが提供されていません" });
     }
 
-    logger.info('WebServer', 'コード分析リクエスト');
+    logger.info("WebServer", "コード分析リクエスト");
 
     // 新しいCodeAnalyzerクラスを使用
     const analyzer = new CodeAnalyzer();
 
     // ファイル名を推測
-    const filename = code.includes('function') ? 'code.js' :
-                    code.includes('def ') ? 'code.py' :
-                    code.includes('class ') && code.includes('interface') ? 'code.ts' :
-                    code.includes('public class') ? 'Code.java' : 'code.txt';
+    const filename = code.includes("function")
+      ? "code.js"
+      : code.includes("def ")
+        ? "code.py"
+        : code.includes("class ") && code.includes("interface")
+          ? "code.ts"
+          : code.includes("public class")
+            ? "Code.java"
+            : "code.txt";
 
     const analysisReport = await analyzer.analyzeCode(code, filename);
 
-    logger.info('WebServer', 'コード分析完了');
+    logger.info("WebServer", "コード分析完了");
 
     res.json({
       success: true,
@@ -67,20 +72,19 @@ app.post('/api/analyze', async (req: any, res: any) => {
         summary: {
           overallScore: analysisReport.summary.overallScore,
           totalComments: analysisReport.summary.totalComments,
-          recommendation: analysisReport.summary.recommendation
+          recommendation: analysisReport.summary.recommendation,
         },
-        comments: analysisReport.agentResults.flatMap(agent => agent.comments),
-        executionTime: analysisReport.executionStats.totalTimeMs
-      }
+        comments: analysisReport.agentResults.flatMap((agent) => agent.comments),
+        executionTime: analysisReport.executionStats.totalTimeMs,
+      },
     });
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('WebServer', `PR分析エラー: ${errorMessage}`);
+    logger.error("WebServer", `PR分析エラー: ${errorMessage}`);
 
     res.status(500).json({
-      error: 'サーバーエラーが発生しました',
-      details: errorMessage
+      error: "サーバーエラーが発生しました",
+      details: errorMessage,
     });
   }
 });
@@ -88,7 +92,7 @@ app.post('/api/analyze', async (req: any, res: any) => {
 // parseAgentComments関数は不要になったので削除
 
 // フロントエンド用のHTMLページ
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   res.send(`
 <!DOCTYPE html>
 <html lang="ja">
@@ -353,18 +357,18 @@ class UserService {
 
 // サーバー起動
 app.listen(PORT, () => {
-  logger.info('WebServer', `🌐 PR Review Agent Web UI が起動しました`);
-  logger.info('WebServer', `🔗 http://localhost:${PORT} でアクセスできます`);
-  logger.info('WebServer', `📝 コード分析を試してみてください！`);
+  logger.info("WebServer", "🌐 PR Review Agent Web UI が起動しました");
+  logger.info("WebServer", `🔗 http://localhost:${PORT} でアクセスできます`);
+  logger.info("WebServer", "📝 コード分析を試してみてください！");
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  logger.info('WebServer', 'サーバーを停止しています...');
+process.on("SIGTERM", () => {
+  logger.info("WebServer", "サーバーを停止しています...");
   process.exit(0);
 });
 
-process.on('SIGINT', () => {
-  logger.info('WebServer', 'サーバーを停止しています...');
+process.on("SIGINT", () => {
+  logger.info("WebServer", "サーバーを停止しています...");
   process.exit(0);
 });

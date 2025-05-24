@@ -54,6 +54,9 @@ web_modules/
 # Optional eslint cache
 .eslintcache
 
+# Biome cache
+.biome/
+
 # Optional stylelint cache
 .stylelintcache
 

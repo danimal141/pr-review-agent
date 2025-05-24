@@ -1,6 +1,6 @@
-import { z } from 'zod';
-import { PRInfoSchema } from './github.js';
-import { ReviewCommentSchema } from './review.js';
+import { z } from "zod";
+import { PRInfoSchema } from "./github.js";
+import { ReviewCommentSchema } from "./review.js";
 
 /**
  * エージェントタスクの型定義
@@ -43,7 +43,7 @@ export const AgentConfigSchema = z.object({
   filePatterns: z.array(z.string()).optional(), // 対象ファイルパターン
   excludePatterns: z.array(z.string()).optional(), // 除外ファイルパターン
   llmSettings: z.object({
-    provider: z.enum(['vercel-ai', 'anthropic-ai', 'google-ai']),
+    provider: z.enum(["vercel-ai", "anthropic-ai", "google-ai"]),
     model: z.string(),
     temperature: z.number().min(0).max(2).default(0.1),
     maxTokens: z.number().optional(),
@@ -58,7 +58,7 @@ export type AgentConfig = z.infer<typeof AgentConfigSchema>;
 export const SupervisorInstructionSchema = z.object({
   instructionId: z.string(),
   targetAgents: z.array(z.string()), // 対象エージェント名
-  priority: z.enum(['low', 'normal', 'high', 'critical']),
+  priority: z.enum(["low", "normal", "high", "critical"]),
   parallelExecution: z.boolean().default(true), // 並行実行するかどうか
   dependencies: z.array(z.string()).optional(), // 依存する他のinstructionId
   timeoutMs: z.number().default(60000),

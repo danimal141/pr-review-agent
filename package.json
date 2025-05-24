@@ -11,8 +11,12 @@
     "test": "vitest -w false",
     "test:watch": "vitest --watch",
     "test:agents": "tsx scripts/test-agents.ts",
-    "lint": "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix",
+    "lint": "biome lint src tests scripts",
+    "lint:fix": "biome lint --write src tests scripts",
+    "format": "biome format src tests scripts",
+    "format:fix": "biome format --write src tests scripts",
+    "check": "biome check src tests scripts",
+    "check:fix": "biome check --write src tests scripts",
     "type-check": "tsc --noEmit"
   },
   "keywords": [
@@ -35,12 +39,10 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@types/cors": "^2.8.18",
     "@types/express": "^5.0.2",
     "@types/node": "^20.10.5",
-    "@typescript-eslint/eslint-plugin": "^6.16.0",
-    "@typescript-eslint/parser": "^6.16.0",
-    "eslint": "^8.56.0",
     "tsx": "^4.19.4",
     "typescript": "^5.3.3",
     "vitest": "^1.1.0"

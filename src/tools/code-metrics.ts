@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { FileChange } from '../types/github.js';
+import { z } from "zod";
+import type { FileChange } from "../types/github.js";
 
 /**
  * コードメトリクスの型定義
@@ -44,14 +44,14 @@ export interface CodeMetrics {
 export interface ProblematicFunction {
   name: string;
   line: number;
-  issue: 'too-complex' | 'too-long' | 'too-many-params' | 'deeply-nested';
+  issue: "too-complex" | "too-long" | "too-many-params" | "deeply-nested";
   value: number;
   suggestion: string;
 }
 
 export interface QualitySuggestion {
-  type: 'complexity' | 'length' | 'duplication' | 'naming' | 'structure';
-  priority: 'low' | 'medium' | 'high' | 'critical';
+  type: "complexity" | "length" | "duplication" | "naming" | "structure";
+  priority: "low" | "medium" | "high" | "critical";
   message: string;
   filename: string;
   line?: number;
@@ -80,41 +80,40 @@ interface FunctionInfo {
  * - コード品質スコアの算出
  */
 export class CodeMetricsTool {
-
   /**
    * ファイルのメトリクスを計算
    */
   static calculateMetrics(content: string, filename: string): CodeMetrics {
-    const language = this.detectLanguage(filename);
-    const lines = content.split('\n');
+    const language = CodeMetricsTool.detectLanguage(filename);
+    const lines = content.split("\n");
 
     // 基本メトリクス
-    const basicMetrics = this.calculateBasicMetrics(lines);
+    const basicMetrics = CodeMetricsTool.calculateBasicMetrics(lines);
 
     // 関数解析
-    const functions = this.analyzeFunctions(content, language);
+    const functions = CodeMetricsTool.analyzeFunctions(content, language);
 
     // 複雑度計算
-    const complexityMetrics = this.calculateComplexityMetrics(content, functions);
+    const complexityMetrics = CodeMetricsTool.calculateComplexityMetrics(content, functions);
 
     // クラス/モジュールメトリクス
-    const structureMetrics = this.calculateStructureMetrics(content, language);
+    const structureMetrics = CodeMetricsTool.calculateStructureMetrics(content, language);
 
     // 保守性指標
-    const maintainabilityIndex = this.calculateMaintainabilityIndex(
+    const maintainabilityIndex = CodeMetricsTool.calculateMaintainabilityIndex(
       basicMetrics.linesOfCode,
       complexityMetrics.cyclomaticComplexity,
       basicMetrics.commentLines / basicMetrics.linesOfCode
     );
 
     // 重複コード比率（簡易版）
-    const duplicateCodeRatio = this.estimateDuplicateCode(lines);
+    const duplicateCodeRatio = CodeMetricsTool.estimateDuplicateCode(lines);
 
     // 問題のある関数を特定
-    const problematicFunctions = this.identifyProblematicFunctions(functions);
+    const problematicFunctions = CodeMetricsTool.identifyProblematicFunctions(functions);
 
     // 改善提案を生成
-    const suggestions = this.generateSuggestions(
+    const suggestions = CodeMetricsTool.generateSuggestions(
       filename,
       basicMetrics,
       complexityMetrics,
@@ -123,7 +122,7 @@ export class CodeMetricsTool {
     );
 
     // 品質スコアを計算
-    const qualityScore = this.calculateQualityScore({
+    const qualityScore = CodeMetricsTool.calculateQualityScore({
       ...basicMetrics,
       ...complexityMetrics,
       ...structureMetrics,
@@ -152,15 +151,15 @@ export class CodeMetricsTool {
   static calculateBatchMetrics(files: FileChange[]): CodeMetrics[] {
     const results: CodeMetrics[] = [];
 
-    files.forEach(file => {
+    files.forEach((file) => {
       if (!file.patch) return;
 
       // パッチから新しく追加されたコンテンツを抽出
-      const addedContent = this.extractAddedContent(file.patch);
+      const addedContent = CodeMetricsTool.extractAddedContent(file.patch);
       if (addedContent.trim().length === 0) return;
 
       try {
-        const metrics = this.calculateMetrics(addedContent, file.filename);
+        const metrics = CodeMetricsTool.calculateMetrics(addedContent, file.filename);
         results.push(metrics);
       } catch (error) {
         console.warn(`メトリクス計算エラー: ${file.filename}`, error);
@@ -179,17 +178,17 @@ export class CodeMetricsTool {
     commentLines: number;
     blankLines: number;
   } {
-    let linesOfCode = lines.length;
+    const linesOfCode = lines.length;
     let logicalLinesOfCode = 0;
     let commentLines = 0;
     let blankLines = 0;
 
-    lines.forEach(line => {
+    lines.forEach((line) => {
       const trimmed = line.trim();
 
-      if (trimmed === '') {
+      if (trimmed === "") {
         blankLines++;
-      } else if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) {
+      } else if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) {
         commentLines++;
       } else {
         logicalLinesOfCode++;
@@ -209,10 +208,10 @@ export class CodeMetricsTool {
    */
   private static analyzeFunctions(content: string, language: string): FunctionInfo[] {
     const functions: FunctionInfo[] = [];
-    const lines = content.split('\n');
+    const lines = content.split("\n");
 
-    if (language === 'typescript' || language === 'javascript') {
-      return this.analyzeJavaScriptFunctions(lines);
+    if (language === "typescript" || language === "javascript") {
+      return CodeMetricsTool.analyzeJavaScriptFunctions(lines);
     }
 
     return functions;
@@ -236,10 +235,10 @@ export class CodeMetricsTool {
         /(?:async\s+)?(?:function\s+|const\s+|let\s+|var\s+)?(\w+)\s*(?:=\s*)?(?:async\s+)?\(([^)]*)\)|(\w+)\s*:\s*(?:async\s+)?\([^)]*\)\s*=>/
       );
 
-      if (functionMatch && (trimmed.includes('function') || trimmed.includes('=>'))) {
-        const functionName = functionMatch[1] || functionMatch[3] || 'anonymous';
-        const parameters = functionMatch[2] || '';
-        const paramCount = parameters ? parameters.split(',').length : 0;
+      if (functionMatch && (trimmed.includes("function") || trimmed.includes("=>"))) {
+        const functionName = functionMatch[1] || functionMatch[3] || "anonymous";
+        const parameters = functionMatch[2] || "";
+        const paramCount = parameters ? parameters.split(",").length : 0;
 
         currentFunction = {
           name: functionName,
@@ -254,16 +253,16 @@ export class CodeMetricsTool {
 
       if (currentFunction) {
         // 複雑度を増加させる構造
-        if (trimmed.includes('if') || trimmed.includes('else if')) {
+        if (trimmed.includes("if") || trimmed.includes("else if")) {
           currentFunction.complexity = (currentFunction.complexity || 1) + 1;
         }
-        if (trimmed.includes('for') || trimmed.includes('while') || trimmed.includes('do')) {
+        if (trimmed.includes("for") || trimmed.includes("while") || trimmed.includes("do")) {
           currentFunction.complexity = (currentFunction.complexity || 1) + 1;
         }
-        if (trimmed.includes('switch')) {
+        if (trimmed.includes("switch")) {
           currentFunction.complexity = (currentFunction.complexity || 1) + 1;
         }
-        if (trimmed.includes('catch')) {
+        if (trimmed.includes("catch")) {
           currentFunction.complexity = (currentFunction.complexity || 1) + 1;
         }
 
@@ -291,7 +290,10 @@ export class CodeMetricsTool {
   /**
    * 複雑度メトリクスを計算
    */
-  private static calculateComplexityMetrics(content: string, functions: FunctionInfo[]): {
+  private static calculateComplexityMetrics(
+    content: string,
+    functions: FunctionInfo[]
+  ): {
     cyclomaticComplexity: number;
     cognitiveComplexity: number;
     nestingDepth: number;
@@ -302,13 +304,13 @@ export class CodeMetricsTool {
     const cyclomaticComplexity = functions.reduce((sum, fn) => sum + fn.complexity, 0);
 
     // 認知的複雑度（簡易版）
-    const cognitiveComplexity = this.calculateCognitiveComplexity(content);
+    const cognitiveComplexity = CodeMetricsTool.calculateCognitiveComplexity(content);
 
-    const nestingDepth = Math.max(...functions.map(fn => fn.nestingDepth), 0);
+    const nestingDepth = Math.max(...functions.map((fn) => fn.nestingDepth), 0);
     const functionCount = functions.length;
-    const averageFunctionLength = functionCount > 0 ?
-      functions.reduce((sum, fn) => sum + fn.length, 0) / functionCount : 0;
-    const longestFunction = Math.max(...functions.map(fn => fn.length), 0);
+    const averageFunctionLength =
+      functionCount > 0 ? functions.reduce((sum, fn) => sum + fn.length, 0) / functionCount : 0;
+    const longestFunction = Math.max(...functions.map((fn) => fn.length), 0);
 
     return {
       cyclomaticComplexity,
@@ -326,9 +328,9 @@ export class CodeMetricsTool {
   private static calculateCognitiveComplexity(content: string): number {
     let complexity = 0;
     let nestingLevel = 0;
-    const lines = content.split('\n');
+    const lines = content.split("\n");
 
-    lines.forEach(line => {
+    lines.forEach((line) => {
       const trimmed = line.trim();
 
       // ネストレベルを追跡
@@ -337,16 +339,16 @@ export class CodeMetricsTool {
       nestingLevel += openBraces - closeBraces;
 
       // 複雑度を増加させる構造（ネストレベルを考慮）
-      if (trimmed.includes('if') || trimmed.includes('else if')) {
+      if (trimmed.includes("if") || trimmed.includes("else if")) {
         complexity += 1 + nestingLevel;
       }
-      if (trimmed.includes('for') || trimmed.includes('while')) {
+      if (trimmed.includes("for") || trimmed.includes("while")) {
         complexity += 1 + nestingLevel;
       }
-      if (trimmed.includes('switch')) {
+      if (trimmed.includes("switch")) {
         complexity += 1 + nestingLevel;
       }
-      if (trimmed.includes('catch')) {
+      if (trimmed.includes("catch")) {
         complexity += 1 + nestingLevel;
       }
     });
@@ -357,7 +359,10 @@ export class CodeMetricsTool {
   /**
    * 構造メトリクスを計算
    */
-  private static calculateStructureMetrics(content: string, language: string): {
+  private static calculateStructureMetrics(
+    content: string,
+    language: string
+  ): {
     classCount: number;
     methodCount: number;
   } {
@@ -397,9 +402,10 @@ export class CodeMetricsTool {
     const lineMap = new Map<string, number>();
     let duplicateLines = 0;
 
-    lines.forEach(line => {
+    lines.forEach((line) => {
       const trimmed = line.trim();
-      if (trimmed.length > 10) { // 短い行は無視
+      if (trimmed.length > 10) {
+        // 短い行は無視
         const count = lineMap.get(trimmed) || 0;
         lineMap.set(trimmed, count + 1);
         if (count > 0) {
@@ -417,15 +423,15 @@ export class CodeMetricsTool {
   private static identifyProblematicFunctions(functions: FunctionInfo[]): ProblematicFunction[] {
     const problematic: ProblematicFunction[] = [];
 
-    functions.forEach(fn => {
+    functions.forEach((fn) => {
       // 複雑度が高い
       if (fn.complexity > 10) {
         problematic.push({
           name: fn.name,
           line: fn.line,
-          issue: 'too-complex',
+          issue: "too-complex",
           value: fn.complexity,
-          suggestion: '関数を小さな関数に分割することを検討してください',
+          suggestion: "関数を小さな関数に分割することを検討してください",
         });
       }
 
@@ -434,9 +440,9 @@ export class CodeMetricsTool {
         problematic.push({
           name: fn.name,
           line: fn.line,
-          issue: 'too-long',
+          issue: "too-long",
           value: fn.length,
-          suggestion: '関数を小さな関数に分割することを検討してください',
+          suggestion: "関数を小さな関数に分割することを検討してください",
         });
       }
 
@@ -445,9 +451,9 @@ export class CodeMetricsTool {
         problematic.push({
           name: fn.name,
           line: fn.line,
-          issue: 'too-many-params',
+          issue: "too-many-params",
           value: fn.parameterCount,
-          suggestion: 'オブジェクトにパラメータをまとめることを検討してください',
+          suggestion: "オブジェクトにパラメータをまとめることを検討してください",
         });
       }
 
@@ -456,9 +462,9 @@ export class CodeMetricsTool {
         problematic.push({
           name: fn.name,
           line: fn.line,
-          issue: 'deeply-nested',
+          issue: "deeply-nested",
           value: fn.nestingDepth,
-          suggestion: 'early return やガード句を使用してネストを減らしてください',
+          suggestion: "early return やガード句を使用してネストを減らしてください",
         });
       }
     });
@@ -481,9 +487,9 @@ export class CodeMetricsTool {
     // 複雑度に関する提案
     if (complexityMetrics.cyclomaticComplexity > 20) {
       suggestions.push({
-        type: 'complexity',
-        priority: 'high',
-        message: 'ファイル全体の複雑度が高すぎます。関数の分割を検討してください',
+        type: "complexity",
+        priority: "high",
+        message: "ファイル全体の複雑度が高すぎます。関数の分割を検討してください",
         filename,
       });
     }
@@ -491,9 +497,9 @@ export class CodeMetricsTool {
     // ファイルサイズに関する提案
     if (basicMetrics.linesOfCode > 500) {
       suggestions.push({
-        type: 'length',
-        priority: 'medium',
-        message: 'ファイルが大きすぎます。複数のファイルに分割することを検討してください',
+        type: "length",
+        priority: "medium",
+        message: "ファイルが大きすぎます。複数のファイルに分割することを検討してください",
         filename,
       });
     }
@@ -502,9 +508,9 @@ export class CodeMetricsTool {
     const commentRatio = basicMetrics.commentLines / basicMetrics.linesOfCode;
     if (commentRatio < 0.1) {
       suggestions.push({
-        type: 'structure',
-        priority: 'low',
-        message: 'コメントが少なすぎます。コードの説明を追加してください',
+        type: "structure",
+        priority: "low",
+        message: "コメントが少なすぎます。コードの説明を追加してください",
         filename,
       });
     }
@@ -543,28 +549,28 @@ export class CodeMetricsTool {
    * 言語を検出
    */
   private static detectLanguage(filename: string): string {
-    const ext = filename.split('.').pop()?.toLowerCase();
+    const ext = filename.split(".").pop()?.toLowerCase();
     const languageMap: Record<string, string> = {
-      'ts': 'typescript',
-      'tsx': 'typescript',
-      'js': 'javascript',
-      'jsx': 'javascript',
-      'py': 'python',
-      'java': 'java',
-      'go': 'go',
+      ts: "typescript",
+      tsx: "typescript",
+      js: "javascript",
+      jsx: "javascript",
+      py: "python",
+      java: "java",
+      go: "go",
     };
-    return languageMap[ext || ''] || 'unknown';
+    return languageMap[ext || ""] || "unknown";
   }
 
   /**
    * パッチから追加されたコンテンツを抽出
    */
   private static extractAddedContent(patch: string): string {
-    const lines = patch.split('\n');
+    const lines = patch.split("\n");
     const addedLines = lines
-      .filter(line => line.startsWith('+') && !line.startsWith('+++'))
-      .map(line => line.substring(1));
+      .filter((line) => line.startsWith("+") && !line.startsWith("+++"))
+      .map((line) => line.substring(1));
 
-    return addedLines.join('\n');
+    return addedLines.join("\n");
   }
 }
