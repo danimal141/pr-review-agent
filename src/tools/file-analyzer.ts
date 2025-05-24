@@ -1,4 +1,3 @@
-import { z } from "zod";
 import type { FileChange } from "../types/github.js";
 
 /**
@@ -303,14 +302,14 @@ export class FileAnalyzerTool {
     const modifiedLines: Array<{ line: number; before: string; after: string }> = [];
     const affectedFunctions: string[] = [];
 
-    let currentLine = 0;
+    let _currentLine = 0;
 
     for (const line of lines) {
       if (line.startsWith("@@")) {
         // 行番号情報を抽出
         const match = line.match(/@@ -(\d+),?\d* \+(\d+),?\d* @@/);
         if (match) {
-          currentLine = Number.parseInt(match[2]);
+          _currentLine = Number.parseInt(match[2]);
         }
         continue;
       }
@@ -325,11 +324,11 @@ export class FileAnalyzerTool {
             affectedFunctions.push(functionMatch[1]);
           }
         }
-        currentLine++;
+        _currentLine++;
       } else if (line.startsWith("-") && !line.startsWith("---")) {
         removedLines.push(line.substring(1));
       } else if (!line.startsWith("\\")) {
-        currentLine++;
+        _currentLine++;
       }
     }
 

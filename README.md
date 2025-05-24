@@ -26,7 +26,7 @@ VoltAgent を使用した AI 駆動の GitHub Pull Request レビューエージ
 
 ### 必要な環境
 
-- Node.js 18.0.0 以上
+- Node.js 21.0.0 以上
 - GitHub Actions 環境（自動レビュー用）
 - AIプロバイダーAPIキー（OpenAI、Anthropic、Googleのいずれか）
 
@@ -76,9 +76,49 @@ AI_REVIEW_MAX_LINES=5000
 
 ### GitHub Actions での自動レビュー
 
-1. `.github/workflows/pr-review.yml` ファイルが自動で設定されます
-2. Pull Request が作成・更新されると自動でレビューが実行されます
-3. レビュー結果は PR コメントと GitHub Actions Job Summary に表示されます
+プロジェクトには以下のGitHub Actionsワークフローが含まれています：
+
+#### ワークフロー設定 (`.github/workflows/pr-review.yml`)
+
+```yaml
+name: PR Review Agent
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, master]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+```
+
+#### 必要なシークレット
+
+リポジトリの **Settings > Secrets and variables > Actions** で以下を設定：
+
+| シークレット名      | 必須 | 説明                     |
+| ------------------- | ---- | ------------------------ |
+| `ANTHROPIC_API_KEY` | ❌    | Anthropic Claude APIキー |
+| `OPENAI_API_KEY`    | ❌    | OpenAI GPT APIキー       |
+| `GOOGLE_AI_API_KEY` | ❌    | Google Gemini APIキー    |
+
+**注意**: 少なくとも1つのAI APIキーが必要です。`GITHUB_TOKEN`は自動で提供されます。
+
+#### 動作フロー
+
+1. Pull Request が作成・更新されると自動でトリガー
+2. Node.js 21環境をセットアップ
+3. 依存関係をインストールしプロジェクトをビルド
+4. PR情報を環境変数として渡してレビューエージェントを実行
+5. レビュー結果をPRコメントとして自動投稿
+
+#### ワークフロー実行結果の確認
+
+- **Actions タブ**: 実行ログとJob Summaryで詳細分析結果を確認
+- **Pull Request**: AIレビューコメントが自動投稿
+- **Checks セクション**: PRページでレビュー状況を確認
 
 ### ローカルでの実行
 

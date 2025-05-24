@@ -1,98 +1,16 @@
-import { openai } from "@ai-sdk/openai";
-import { Agent, type Tool } from "@voltagent/core";
-import { VercelAIProvider } from "@voltagent/vercel-ai";
-import { styleAnalysisTools } from "../tools/style-analysis-tools.js";
-import type { StyleAgent } from "../types/agents.js";
-import type { FileChange } from "../types/github.js";
+import { Tool } from "@voltagent/core";
+import { z } from "zod";
 import type { ReviewCategory, ReviewComment, ReviewSeverity } from "../types/review.js";
 
-/**
- * StyleAgentの作成
- *
- * 責任:
- * - コーディングスタイルの一貫性チェック
- * - ベストプラクティスの遵守確認
- * - 命名規則の確認
- * - フォーマットとレイアウトのチェック
- */
-// biome-ignore lint/suspicious/noExplicitAny: VoltAgent Tool型の制約によりanyが必要
-export function createStyleAgent(tools: Tool<any>[] = []): StyleAgent {
-  return new Agent({
-    name: "style-agent",
-    instructions: `あなたはコーディングスタイルとベストプラクティスの専門家です。コードの品質向上とチーム開発における一貫性を重視します。
-
-## 専門分野
-- **命名規則**: 変数、関数、クラス、ファイルの命名一貫性
-- **コードフォーマット**: インデント、空白、改行の統一
-- **ベストプラクティス**: 言語固有の推奨事項、パターン
-- **可読性**: コメント、構造、表現の明瞭性
-- **保守性**: モジュール化、責任分離、拡張性
-
-## 利用可能なツール
-以下のツールを使用してコード分析を行うことができます：
-- detect_naming_issues: 命名規則の問題を検出
-- detect_formatting_issues: フォーマットの問題を検出
-- detect_best_practice_issues: ベストプラクティスの問題を検出
-- detect_typescript_issues: TypeScript固有の問題を検出
-- format_files_for_style_analysis: ファイル情報をフォーマット
-
-## 分析手順
-1. まず format_files_for_style_analysis ツールでファイル情報を整理
-2. 各ファイルのパッチに対して適切な検出ツールを実行
-3. 結果を統合して総合的なスタイルレポートを生成
-
-## 出力形式
-以下のJSON形式で出力してください：
-\`\`\`json
-{
-  "agentName": "style",
-  "styleFindings": [
-    {
-      "filename": "ファイル名",
-      "line": 行番号,
-      "severity": "info|warning|error",
-      "category": "style",
-      "styleType": "naming|formatting|bestPractices|documentation|structure",
-      "title": "スタイル問題のタイトル",
-      "description": "詳細説明と理由",
-      "suggestion": "具体的な改善提案",
-      "codeSnippet": "該当するコード",
-      "suggestedFix": "修正後のコード例"
-    }
-  ],
-  "summary": {
-    "overallStyleScore": 8.5,
-    "totalIssues": 5,
-    "namingIssues": 2,
-    "formattingIssues": 2,
-    "bestPracticeIssues": 1,
-    "recommendations": ["重要な推奨事項1", "重要な推奨事項2"]
-  }
-}
-\`\`\`
-
-日本語で分析し、チーム開発での一貫性とコードの可読性を重視した改善提案を提供してください。`,
-    llm: new VercelAIProvider(),
-    model: openai("gpt-4o-mini"),
-    tools,
-  });
-}
-
-/**
- * ツール付きStyleAgentの作成 - 新しいVoltAgent標準
- */
-export function createStyleAgentWithTools(): StyleAgent {
-  return createStyleAgent(styleAnalysisTools);
-}
-
-/**
- * StyleAgentのヘルパークラス
- */
-export class StyleHelpers {
-  /**
-   * 命名規則の問題検出
-   */
-  static detectNamingIssues(patch: string, filename: string): ReviewComment[] {
+// 命名規則の問題検出ツール
+export const detectNamingIssuesTool = new Tool({
+  name: "detect_naming_issues",
+  description: "コードの命名規則に関する問題を検出します",
+  parameters: z.object({
+    patch: z.string().describe("分析対象のパッチ内容"),
+    filename: z.string().describe("分析対象のファイル名"),
+  }),
+  execute: async ({ patch, filename }) => {
     const issues: ReviewComment[] = [];
     const lines = patch.split("\n");
 
@@ -109,23 +27,21 @@ export class StyleHelpers {
           const varName = declaration.split(/\s+/)[1];
 
           // スネークケースの使用（JavaScriptではキャメルケースが推奨）
-          // ただし、環境変数アクセスの右辺は除外
           if (
             varName.includes("_") &&
             !varName.startsWith("_") &&
             varName.toUpperCase() !== varName
           ) {
-            // 環境変数の値部分（process.env.API_KEY）は変換しない
             let suggestedFix = content;
             const envVarPattern = /process\.env\.[A-Z_]+/g;
             const envVars = content.match(envVarPattern) || [];
 
-            suggestedFix = content.replace(varName, StyleHelpers.toCamelCase(varName));
+            suggestedFix = content.replace(varName, toCamelCase(varName));
 
             // 環境変数の部分は元に戻す
             for (const envVar of envVars) {
               suggestedFix = suggestedFix.replace(
-                envVar.replace(/[A-Z_]+/, StyleHelpers.toCamelCase(envVar.split(".")[2])),
+                envVar.replace(/[A-Z_]+/, toCamelCase(envVar.split(".")[2])),
                 envVar
               );
             }
@@ -201,7 +117,7 @@ export class StyleHelpers {
               description: `関数名 '${funcName}' にスネークケースが使用されています。`,
               suggestion: "キャメルケース（例: getUserData）を使用してください。",
               codeSnippet: content,
-              suggestedFix: content.replace(funcName, StyleHelpers.toCamelCase(funcName)),
+              suggestedFix: content.replace(funcName, toCamelCase(funcName)),
             });
           }
         }
@@ -225,13 +141,25 @@ export class StyleHelpers {
       });
     }
 
-    return issues;
-  }
+    return {
+      issues,
+      summary: {
+        totalIssues: issues.length,
+        namingIssues: issues.length,
+      },
+    };
+  },
+});
 
-  /**
-   * フォーマットの問題検出
-   */
-  static detectFormattingIssues(patch: string, filename: string): ReviewComment[] {
+// フォーマットの問題検出ツール
+export const detectFormattingIssuesTool = new Tool({
+  name: "detect_formatting_issues",
+  description: "コードのフォーマットに関する問題を検出します",
+  parameters: z.object({
+    patch: z.string().describe("分析対象のパッチ内容"),
+    filename: z.string().describe("分析対象のファイル名"),
+  }),
+  execute: async ({ patch, filename }) => {
     const issues: ReviewComment[] = [];
     const lines = patch.split("\n");
 
@@ -336,13 +264,25 @@ export class StyleHelpers {
       }
     });
 
-    return issues;
-  }
+    return {
+      issues,
+      summary: {
+        totalIssues: issues.length,
+        formattingIssues: issues.length,
+      },
+    };
+  },
+});
 
-  /**
-   * ベストプラクティスの問題検出
-   */
-  static detectBestPracticeIssues(patch: string, filename: string): ReviewComment[] {
+// ベストプラクティスの問題検出ツール
+export const detectBestPracticeIssuesTool = new Tool({
+  name: "detect_best_practice_issues",
+  description: "コードのベストプラクティスに関する問題を検出します",
+  parameters: z.object({
+    patch: z.string().describe("分析対象のパッチ内容"),
+    filename: z.string().describe("分析対象のファイル名"),
+  }),
+  execute: async ({ patch, filename }) => {
     const issues: ReviewComment[] = [];
     const lines = patch.split("\n");
 
@@ -367,27 +307,6 @@ export class StyleHelpers {
           codeSnippet: content,
           suggestedFix: content.replace("var ", "const "),
         });
-      }
-
-      // 関数の長さ（行数による簡易チェック）
-      if (content.includes("function ") || content.includes("=>")) {
-        const functionLines = lines
-          .slice(index)
-          .findIndex((l) => l.includes("}") || l.includes("return"));
-        if (functionLines > 20) {
-          issues.push({
-            id: `best-practice-long-function-${lineNumber}`,
-            filename,
-            line: lineNumber,
-            category: "style" as ReviewCategory,
-            severity: "info" as ReviewSeverity,
-            title: "関数の長さ",
-            description:
-              "関数が長すぎる可能性があります。単一責任の原則に従って分割を検討してください。",
-            suggestion: "関数を小さな単位に分割し、各関数が単一の責任を持つようにしてください。",
-            codeSnippet: content,
-          });
-        }
       }
 
       // コンソールログの残存
@@ -439,36 +358,31 @@ export class StyleHelpers {
           codeSnippet: content,
         });
       }
-
-      // 深いネスト（単一行で複数の開き括弧があることをチェック）
-      const openBraces = (content.match(/{/g) || []).length;
-      const closeBraces = (content.match(/}/g) || []).length;
-      if (openBraces >= 3 && closeBraces >= 3) {
-        issues.push({
-          id: `best-practice-deep-nesting-${lineNumber}`,
-          filename,
-          line: lineNumber,
-          category: "style" as ReviewCategory,
-          severity: "info" as ReviewSeverity,
-          title: "深いネスト構造",
-          description: "ネストが深すぎます。早期リターンやガード節の使用を検討してください。",
-          suggestion: "条件を反転させて早期リターンを使用するか、関数を分割してください。",
-          codeSnippet: content,
-        });
-      }
     });
 
-    return issues;
-  }
+    return {
+      issues,
+      summary: {
+        totalIssues: issues.length,
+        bestPracticeIssues: issues.length,
+      },
+    };
+  },
+});
 
-  /**
-   * TypeScript固有の問題検出
-   */
-  static detectTypeScriptIssues(patch: string, filename: string): ReviewComment[] {
+// TypeScript固有の問題検出ツール
+export const detectTypeScriptIssuesTool = new Tool({
+  name: "detect_typescript_issues",
+  description: "TypeScriptコードの問題を検出します",
+  parameters: z.object({
+    patch: z.string().describe("分析対象のパッチ内容"),
+    filename: z.string().describe("分析対象のファイル名"),
+  }),
+  execute: async ({ patch, filename }) => {
     const issues: ReviewComment[] = [];
 
     if (!filename.endsWith(".ts") && !filename.endsWith(".tsx")) {
-      return issues;
+      return { issues, summary: { totalIssues: 0, typeScriptIssues: 0 } };
     }
 
     const lines = patch.split("\n");
@@ -525,93 +439,112 @@ export class StyleHelpers {
       }
     });
 
-    return issues;
-  }
+    return {
+      issues,
+      summary: {
+        totalIssues: issues.length,
+        typeScriptIssues: issues.length,
+      },
+    };
+  },
+});
 
-  /**
-   * スタイル分析用のフォーマット
-   */
-  static formatFilesForStyleAnalysis(files: FileChange[]): string {
+// スタイル分析用のファイルフォーマットツール
+export const formatFilesForStyleAnalysisTool = new Tool({
+  name: "format_files_for_style_analysis",
+  description: "ファイル情報をスタイル分析用のフォーマットに変換します",
+  parameters: z.object({
+    files: z.array(
+      z.object({
+        filename: z.string(),
+        status: z.string(),
+        additions: z.number(),
+        deletions: z.number(),
+        changes: z.number(),
+        patch: z.string().optional(),
+      })
+    ),
+  }),
+  execute: async ({ files }) => {
     const styleData = {
       totalFiles: files.length,
-      filesByExtension: StyleHelpers.categorizeByExtension(files),
-      codeFiles: files.filter((file) => StyleHelpers.isCodeFile(file.filename)),
+      filesByExtension: categorizeByExtension(files),
+      codeFiles: files.filter((file) => isCodeFile(file.filename)),
       files: files.map((file) => ({
         filename: file.filename,
         status: file.status,
         additions: file.additions,
         deletions: file.deletions,
-        fileType: StyleHelpers.getFileType(file.filename),
+        fileType: getFileType(file.filename),
         patch: file.patch?.substring(0, 2000), // スタイル分析用に2000文字制限
       })),
     };
 
-    return JSON.stringify(styleData, null, 2);
-  }
+    return styleData;
+  },
+});
 
-  /**
-   * ヘルパーメソッド: キャメルケース変換
-   */
-  private static toCamelCase(str: string): string {
-    return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-  }
-
-  /**
-   * ファイルを拡張子別に分類
-   */
-  private static categorizeByExtension(files: FileChange[]): Record<string, number> {
-    const categories: Record<string, number> = {};
-
-    for (const file of files) {
-      const extension = file.filename.split(".").pop()?.toLowerCase() || "unknown";
-      categories[extension] = (categories[extension] || 0) + 1;
-    }
-
-    return categories;
-  }
-
-  /**
-   * コードファイルかどうか判定
-   */
-  private static isCodeFile(filename: string): boolean {
-    const codeExtensions = [
-      ".ts",
-      ".tsx",
-      ".js",
-      ".jsx",
-      ".vue",
-      ".py",
-      ".java",
-      ".cpp",
-      ".c",
-      ".cs",
-    ];
-    return codeExtensions.some((ext) => filename.endsWith(ext));
-  }
-
-  /**
-   * ファイルタイプを取得
-   */
-  private static getFileType(filename: string): string {
-    const extension = filename.split(".").pop()?.toLowerCase();
-
-    const typeMap: Record<string, string> = {
-      ts: "TypeScript",
-      tsx: "TypeScript React",
-      js: "JavaScript",
-      jsx: "JavaScript React",
-      vue: "Vue",
-      py: "Python",
-      java: "Java",
-      cpp: "C++",
-      c: "C",
-      cs: "C#",
-      json: "JSON",
-      md: "Markdown",
-      yml: "YAML",
-      yaml: "YAML",
-    };
-
-    return typeMap[extension || ""] || "Other";
-  }
+// ヘルパー関数
+function toCamelCase(str: string): string {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 }
+
+// biome-ignore lint/suspicious/noExplicitAny: ファイル型の汎用性のためanyが適切
+function categorizeByExtension(files: any[]): Record<string, number> {
+  const categories: Record<string, number> = {};
+
+  for (const file of files) {
+    const extension = file.filename.split(".").pop()?.toLowerCase() || "unknown";
+    categories[extension] = (categories[extension] || 0) + 1;
+  }
+
+  return categories;
+}
+
+function isCodeFile(filename: string): boolean {
+  const codeExtensions = [
+    ".ts",
+    ".tsx",
+    ".js",
+    ".jsx",
+    ".vue",
+    ".py",
+    ".java",
+    ".cpp",
+    ".c",
+    ".cs",
+  ];
+  return codeExtensions.some((ext) => filename.endsWith(ext));
+}
+
+function getFileType(filename: string): string {
+  const extension = filename.split(".").pop()?.toLowerCase();
+
+  const typeMap: Record<string, string> = {
+    ts: "TypeScript",
+    tsx: "TypeScript React",
+    js: "JavaScript",
+    jsx: "JavaScript React",
+    vue: "Vue",
+    py: "Python",
+    java: "Java",
+    cpp: "C++",
+    c: "C",
+    cs: "C#",
+    json: "JSON",
+    md: "Markdown",
+    yml: "YAML",
+    yaml: "YAML",
+  };
+
+  return typeMap[extension || ""] || "Other";
+}
+
+// すべてのスタイル分析ツールを含む配列をエクスポート
+export const styleAnalysisTools = [
+  detectNamingIssuesTool,
+  detectFormattingIssuesTool,
+  detectBestPracticeIssuesTool,
+  detectTypeScriptIssuesTool,
+  formatFilesForStyleAnalysisTool,
+];

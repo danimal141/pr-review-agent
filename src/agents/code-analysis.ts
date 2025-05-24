@@ -1,5 +1,5 @@
 import { openai } from "@ai-sdk/openai";
-import { Agent } from "@voltagent/core";
+import { Agent, type Tool } from "@voltagent/core";
 import { VercelAIProvider } from "@voltagent/vercel-ai";
 import type { CodeAnalysisAgent } from "../types/agents.js";
 import type { FileChange } from "../types/github.js";
@@ -15,7 +15,8 @@ import type { ReviewCategory, ReviewComment, ReviewSeverity } from "../types/rev
  * - 複雑度の分析
  * - パフォーマンスの評価
  */
-export function createCodeAnalysisAgent(): CodeAnalysisAgent {
+// biome-ignore lint/suspicious/noExplicitAny: VoltAgent Tool型の制約によりanyが必要
+export function createCodeAnalysisAgent(tools: Tool<any>[] = []): CodeAnalysisAgent {
   return new Agent({
     name: "code-analysis-agent",
     instructions: `あなたはコード品質解析の専門家です。
@@ -85,6 +86,7 @@ export function createCodeAnalysisAgent(): CodeAnalysisAgent {
 日本語で分析し、具体的で実行可能な改善提案を提供してください。`,
     llm: new VercelAIProvider(),
     model: openai("gpt-4o-mini"),
+    tools,
   });
 }
 

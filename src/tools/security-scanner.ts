@@ -1,4 +1,3 @@
-import { z } from "zod";
 import type { FileChange } from "../types/github.js";
 
 /**

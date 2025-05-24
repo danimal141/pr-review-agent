@@ -14,6 +14,10 @@
       "suspicious": {
         "noExplicitAny": "warn"
       },
+      "correctness": {
+        "noUnusedImports": "error",
+        "noUnusedVariables": "warn"
+      },
       "complexity": {
         "noStaticOnlyClass": "off",
         "noForEach": "off"

@@ -1,4 +1,3 @@
-import { z } from "zod";
 import type { FileChange } from "../types/github.js";
 
 /**
@@ -361,7 +360,7 @@ export class CodeMetricsTool {
    */
   private static calculateStructureMetrics(
     content: string,
-    language: string
+    _language: string
   ): {
     classCount: number;
     methodCount: number;
@@ -479,8 +478,8 @@ export class CodeMetricsTool {
     filename: string,
     basicMetrics: { linesOfCode: number; commentLines: number },
     complexityMetrics: { cyclomaticComplexity: number },
-    functions: FunctionInfo[],
-    problematicFunctions: ProblematicFunction[]
+    _functions: FunctionInfo[],
+    _problematicFunctions: ProblematicFunction[]
   ): QualitySuggestion[] {
     const suggestions: QualitySuggestion[] = [];
 

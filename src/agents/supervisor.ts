@@ -1,10 +1,9 @@
 import { openai } from "@ai-sdk/openai";
-import { Agent } from "@voltagent/core";
+import { Agent, type Tool } from "@voltagent/core";
 import { VercelAIProvider } from "@voltagent/vercel-ai";
-import { z } from "zod";
 import type { SupervisorAgent } from "../types/agents.js";
 import type { FileChange, GitHubPREvent } from "../types/github.js";
-import { AgentResult, ReviewCategory, type ReviewResult } from "../types/review.js";
+import type { ReviewResult } from "../types/review.js";
 import { logger } from "../utils/logger.js";
 
 /**
@@ -16,7 +15,8 @@ import { logger } from "../utils/logger.js";
  * - レビュー結果の統合
  * - フィードバックの生成
  */
-export function createSupervisorAgent(): SupervisorAgent {
+// biome-ignore lint/suspicious/noExplicitAny: VoltAgent Tool型の制約によりanyが必要
+export function createSupervisorAgent(tools: Tool<any>[] = []): SupervisorAgent {
   return new Agent({
     name: "supervisor-agent",
     instructions: `あなたはPRレビューを統括するSupervisorAgentです。
@@ -60,6 +60,7 @@ PRの変更情報をJSON形式で受け取り、レビューコメントを生�
 \`\`\``,
     llm: new VercelAIProvider(),
     model: openai("gpt-4o-mini"),
+    tools,
   });
 }
 

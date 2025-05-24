@@ -1,5 +1,4 @@
 import { Octokit } from "@octokit/rest";
-import { z } from "zod";
 import type { FileChange, GitHubPREvent, PRInfo } from "../types/github.js";
 
 // GitHub API レスポンスの型定義（手動定義）

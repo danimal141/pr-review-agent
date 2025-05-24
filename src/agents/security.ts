@@ -1,5 +1,5 @@
 import { openai } from "@ai-sdk/openai";
-import { Agent } from "@voltagent/core";
+import { Agent, type Tool } from "@voltagent/core";
 import { VercelAIProvider } from "@voltagent/vercel-ai";
 import type { SecurityAgent } from "../types/agents.js";
 import type { FileChange } from "../types/github.js";
@@ -14,7 +14,8 @@ import type { ReviewCategory, ReviewComment, ReviewSeverity } from "../types/rev
  * - データ漏洩リスクの評価
  * - セキュリティベストプラクティスの確認
  */
-export function createSecurityAgent(): SecurityAgent {
+// biome-ignore lint/suspicious/noExplicitAny: VoltAgent Tool型の制約によりanyが必要
+export function createSecurityAgent(tools: Tool<any>[] = []): SecurityAgent {
   return new Agent({
     name: "security-agent",
     instructions: `あなたはサイバーセキュリティの専門家です。コードのセキュリティ脆弱性を検出し、改善提案を行います。
@@ -87,6 +88,7 @@ export function createSecurityAgent(): SecurityAgent {
 日本語で分析し、具体的で実行可能なセキュリティ改善提案を提供してください。攻撃シナリオと影響を明確に説明してください。`,
     llm: new VercelAIProvider(),
     model: openai("gpt-4o-mini"),
+    tools,
   });
 }
 

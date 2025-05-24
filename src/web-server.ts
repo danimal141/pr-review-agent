@@ -27,7 +27,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "../public")));
 
 // ヘルスチェック
-app.get("/api/health", (req, res) => {
+app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
     service: "PR Review Agent",
@@ -101,7 +101,7 @@ app.post(
 // parseAgentComments関数は不要になったので削除
 
 // フロントエンド用のHTMLページ
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.send(`
 <!DOCTYPE html>
 <html lang="ja">

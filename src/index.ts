@@ -1,13 +1,16 @@
 import "dotenv/config";
 import { createCodeAnalysisAgent } from "./agents/code-analysis.js";
 import { createSecurityAgent } from "./agents/security.js";
-import { createStyleAgent } from "./agents/style.js";
+import { createStyleAgentWithTools } from "./agents/style.js";
 import { SummaryAgentHelpers, createSummaryAgent } from "./agents/summary.js";
 import { createSupervisorAgent } from "./agents/supervisor.js";
+import { codeAnalysisTools } from "./tools/code-analysis-tools.js";
 import { CodeMetricsTool } from "./tools/code-metrics.js";
 import { FileAnalyzerTool } from "./tools/file-analyzer.js";
 import { createGitHubAPITool } from "./tools/github-api.js";
+import { securityAnalysisTools } from "./tools/security-analysis-tools.js";
 import { SecurityScannerTool } from "./tools/security-scanner.js";
+import { summaryAnalysisTools } from "./tools/summary-analysis-tools.js";
 import type { GitHubPREvent, PRInfo } from "./types/github.js";
 import type { AgentResult, ReviewComment, ReviewResult } from "./types/review.js";
 import { logger } from "./utils/logger.js";
@@ -20,16 +23,17 @@ export class PRReviewWorkflow {
   private supervisorAgent: ReturnType<typeof createSupervisorAgent>;
   private codeAnalysisAgent: ReturnType<typeof createCodeAnalysisAgent>;
   private securityAgent: ReturnType<typeof createSecurityAgent>;
-  private styleAgent: ReturnType<typeof createStyleAgent>;
+  private styleAgent: ReturnType<typeof createStyleAgentWithTools>;
   private summaryAgent: ReturnType<typeof createSummaryAgent>;
 
   constructor() {
     this.githubAPI = createGitHubAPITool();
     this.supervisorAgent = createSupervisorAgent();
-    this.codeAnalysisAgent = createCodeAnalysisAgent();
-    this.securityAgent = createSecurityAgent();
-    this.styleAgent = createStyleAgent();
-    this.summaryAgent = createSummaryAgent();
+    // 全エージェントをVoltAgent標準のtools付きで作成
+    this.codeAnalysisAgent = createCodeAnalysisAgent(codeAnalysisTools);
+    this.securityAgent = createSecurityAgent(securityAnalysisTools);
+    this.styleAgent = createStyleAgentWithTools();
+    this.summaryAgent = createSummaryAgent(summaryAnalysisTools);
   }
 
   /**
@@ -462,7 +466,7 @@ export class PRReviewWorkflow {
 }
 
 /**
- * CLIまたはテスト用のエントリーポイント
+ * CLIまたはGitHub Actions用のエントリーポイント
  */
 export async function main() {
   try {
@@ -475,10 +479,64 @@ export async function main() {
 
     const workflow = new PRReviewWorkflow();
 
-    // CLIの場合はここでPRイベントを処理
-    logger.info("Main", "PRレビューエージェントの準備完了");
+    // GitHub Actionsから実行される場合、PR情報を環境変数から取得
+    if (process.env.PR_NUMBER) {
+      logger.info("Main", "GitHub Actionsから実行されました");
+
+      const prNumber = Number.parseInt(process.env.PR_NUMBER, 10);
+      const repoOwner = process.env.REPO_OWNER;
+      const repoName = process.env.REPO_NAME;
+
+      if (!repoOwner || !repoName) {
+        throw new Error("REPO_OWNER または REPO_NAME 環境変数が設定されていません");
+      }
+
+      // GitHubPREventオブジェクトを構築
+      const prEvent: GitHubPREvent = {
+        action: "opened", // GitHub Actionsでは実際のactionを取得できないのでデフォルト値
+        number: prNumber,
+        pullRequest: {
+          id: prNumber, // 簡易的にPR番号をIDとして使用
+          number: prNumber,
+          title: process.env.PR_TITLE || "",
+          body: process.env.PR_BODY || null,
+          head: {
+            sha: process.env.PR_HEAD_SHA || "",
+            ref: process.env.PR_HEAD_REF || "unknown",
+          },
+          base: {
+            sha: process.env.PR_BASE_SHA || "",
+            ref: process.env.PR_BASE_REF || "main",
+          },
+        },
+        repository: {
+          id: 0, // 簡易的に0を設定（実際の処理では使用されない）
+          name: repoName,
+          fullName: `${repoOwner}/${repoName}`,
+          owner: {
+            login: repoOwner,
+          },
+        },
+      };
+
+      logger.info("Main", `PR #${prNumber} のレビューを開始します`);
+
+      // PRレビューを実行
+      const result = await workflow.reviewPR(prEvent);
+
+      logger.info(
+        "Main",
+        `レビュー完了: ${result.summary.totalComments}件のコメント, スコア: ${(result.summary.overallScore * 10).toFixed(1)}/100`
+      );
+
+      process.exit(0);
+    } else {
+      // CLIモードの場合
+      logger.info("Main", "PRレビューエージェントの準備完了 (CLIモード)");
+      logger.info("Main", "GitHub Actionsから実行するか、環境変数PR_NUMBERを設定してください");
+    }
   } catch (error) {
-    logger.error("Main", `初期化エラー: ${error}`);
+    logger.error("Main", `実行エラー: ${error}`);
     process.exit(1);
   }
 }
