@@ -128,3 +128,25 @@ export const ReviewResultSchema = z.object({
 });
 
 export type ReviewResult = z.infer<typeof ReviewResultSchema>;
+
+/**
+ * レビュー要約（SummaryAgent用）
+ */
+export const ReviewSummarySchema = z.object({
+  totalComments: z.number(),
+  bySeverity: z.object({
+    info: z.number(),
+    warning: z.number(),
+    error: z.number(),
+    critical: z.number(),
+  }),
+  byCategory: z.record(z.number()),
+  overallScore: z.number().min(0).max(100), // 0-100のスコア
+  recommendation: z.enum(['approve', 'request_changes', 'comment']),
+  keyFindings: z.array(z.string()),
+  positiveAspects: z.array(z.string()),
+  learningOpportunities: z.array(z.string()),
+  nextSteps: z.array(z.string()),
+});
+
+export type ReviewSummary = z.infer<typeof ReviewSummarySchema>;
