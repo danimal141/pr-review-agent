@@ -10,11 +10,11 @@ export type ReviewSeverity = z.infer<typeof ReviewSeveritySchema>;
  * レビューカテゴリ
  */
 export const ReviewCategorySchema = z.enum([
-  'code_quality',
+  'codeQuality',
   'security',
   'performance',
   'style',
-  'best_practices',
+  'bestPractices',
   'bugs',
   'maintainability'
 ]);
@@ -55,11 +55,11 @@ export const ReviewCategoryHelpers = {
   /** カテゴリの日本語表示名 */
   getDisplayName: (category: ReviewCategory): string => {
     const names = {
-      code_quality: 'コード品質',
+      codeQuality: 'コード品質',
       security: 'セキュリティ',
       performance: 'パフォーマンス',
       style: 'スタイル',
-      best_practices: 'ベストプラクティス',
+      bestPractices: 'ベストプラクティス',
       bugs: 'バグ',
       maintainability: '保守性'
     };
@@ -79,8 +79,8 @@ export const ReviewCommentSchema = z.object({
   title: z.string(),
   description: z.string(),
   suggestion: z.string().optional(), // 修正提案
-  code_snippet: z.string().optional(), // 該当コード
-  suggested_fix: z.string().optional(), // 修正後のコード例
+  codeSnippet: z.string().optional(), // 該当コード
+  suggestedFix: z.string().optional(), // 修正後のコード例
 });
 
 export type ReviewComment = z.infer<typeof ReviewCommentSchema>;
@@ -89,10 +89,10 @@ export type ReviewComment = z.infer<typeof ReviewCommentSchema>;
  * エージェント実行結果
  */
 export const AgentResultSchema = z.object({
-  agent_name: z.string(),
-  execution_time_ms: z.number(),
+  agentName: z.string(),
+  executionTimeMs: z.number(),
   success: z.boolean(),
-  error_message: z.string().optional(),
+  errorMessage: z.string().optional(),
   comments: z.array(ReviewCommentSchema),
   metadata: z.record(z.any()).optional(), // エージェント固有のメタデータ
 });
@@ -103,27 +103,27 @@ export type AgentResult = z.infer<typeof AgentResultSchema>;
  * 総合レビュー結果
  */
 export const ReviewResultSchema = z.object({
-  pr_number: z.number(),
+  prNumber: z.number(),
   repository: z.string(),
-  review_id: z.string(),
-  created_at: z.string(), // ISO 8601形式
-  agent_results: z.array(AgentResultSchema),
+  reviewId: z.string(),
+  createdAt: z.string(), // ISO 8601形式
+  agentResults: z.array(AgentResultSchema),
   summary: z.object({
-    total_comments: z.number(),
-    by_severity: z.object({
+    totalComments: z.number(),
+    bySeverity: z.object({
       info: z.number(),
       warning: z.number(),
       error: z.number(),
       critical: z.number(),
     }),
-    by_category: z.record(z.number()),
-    overall_score: z.number().min(0).max(10), // 0-10のスコア
-    recommendation: z.enum(['approve', 'request_changes', 'comment']),
+    byCategory: z.record(z.number()),
+    overallScore: z.number().min(0).max(10), // 0-10のスコア
+    recommendation: z.enum(['approve', 'requestChanges', 'comment']),
   }),
-  execution_stats: z.object({
-    total_time_ms: z.number(),
-    files_analyzed: z.number(),
-    lines_analyzed: z.number(),
+  executionStats: z.object({
+    totalTimeMs: z.number(),
+    filesAnalyzed: z.number(),
+    linesAnalyzed: z.number(),
   }),
 });
 

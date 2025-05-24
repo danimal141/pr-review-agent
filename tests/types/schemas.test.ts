@@ -33,7 +33,7 @@ describe('review.ts スキーマ', () => {
 
   describe('ReviewCategorySchema', () => {
     it('有効なカテゴリを受け入れる', () => {
-      const validCategories = ['code_quality', 'security', 'performance', 'style', 'best_practices', 'bugs', 'maintainability'];
+      const validCategories = ['codeQuality', 'security', 'performance', 'style', 'bestPractices', 'bugs', 'maintainability'];
 
       validCategories.forEach(category => {
         const result = ReviewCategorySchema.safeParse(category);
@@ -58,8 +58,8 @@ describe('review.ts スキーマ', () => {
         title: 'スタイル改善',
         description: 'constを使用することを推奨します',
         suggestion: 'letの代わりにconstを使用してください',
-        code_snippet: 'let value = "test";',
-        suggested_fix: 'const value = "test";',
+        codeSnippet: 'let value = "test";',
+        suggestedFix: 'const value = "test";',
       };
 
       const result = ReviewCommentSchema.safeParse(validData);
@@ -91,7 +91,7 @@ describe('review.ts スキーマ', () => {
       const validData = {
         id: 'comment-1',
         filename: 'src/index.ts',
-        category: 'code_quality',
+        category: 'codeQuality',
         severity: 'info',
         title: '情報',
         description: '一般的な情報',
@@ -110,27 +110,27 @@ describe('review.ts スキーマ', () => {
   describe('AgentResultSchema', () => {
     it('有効なエージェント結果を正しく解析する', () => {
       const validData = {
-        agent_name: 'CodeAnalysisAgent',
-        execution_time_ms: 1500,
+        agentName: 'CodeAnalysisAgent',
+        executionTimeMs: 1500,
         success: true,
         comments: [
           {
             id: 'comment-1',
             filename: 'src/index.ts',
-            category: 'code_quality',
+            category: 'codeQuality',
             severity: 'warning',
             title: 'テスト',
             description: 'テスト説明',
           }
         ],
-        metadata: { lines_analyzed: 100 },
+        metadata: { linesAnalyzed: 100 },
       };
 
       const result = AgentResultSchema.safeParse(validData);
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.agent_name).toBe('CodeAnalysisAgent');
+        expect(result.data.agentName).toBe('CodeAnalysisAgent');
         expect(result.data.success).toBe(true);
         expect(result.data.comments).toHaveLength(1);
       }
@@ -138,10 +138,10 @@ describe('review.ts スキーマ', () => {
 
     it('エラー時のエージェント結果を正しく解析する', () => {
       const validData = {
-        agent_name: 'FailedAgent',
-        execution_time_ms: 500,
+        agentName: 'FailedAgent',
+        executionTimeMs: 500,
         success: false,
-        error_message: 'API呼び出しに失敗しました',
+        errorMessage: 'API呼び出しに失敗しました',
         comments: [],
       };
 
@@ -150,7 +150,7 @@ describe('review.ts スキーマ', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.success).toBe(false);
-        expect(result.data.error_message).toBe('API呼び出しに失敗しました');
+        expect(result.data.errorMessage).toBe('API呼び出しに失敗しました');
       }
     });
   });
@@ -158,37 +158,37 @@ describe('review.ts スキーマ', () => {
   describe('ReviewResultSchema', () => {
     it('有効なレビュー結果を正しく解析する', () => {
       const validData = {
-        pr_number: 123,
+        prNumber: 123,
         repository: 'owner/repo',
-        review_id: 'review-456',
-        created_at: '2024-01-01T00:00:00Z',
-        agent_results: [
+        reviewId: 'review-456',
+        createdAt: '2024-01-01T00:00:00Z',
+        agentResults: [
           {
-            agent_name: 'TestAgent',
-            execution_time_ms: 1000,
+            agentName: 'TestAgent',
+            executionTimeMs: 1000,
             success: true,
             comments: [],
           }
         ],
         summary: {
-          total_comments: 5,
-          by_severity: {
+          totalComments: 5,
+          bySeverity: {
             info: 2,
             warning: 2,
             error: 1,
             critical: 0,
           },
-          by_category: {
-            code_quality: 3,
+          byCategory: {
+            codeQuality: 3,
             security: 2,
           },
-          overall_score: 7.5,
-          recommendation: 'request_changes',
+          overallScore: 7.5,
+          recommendation: 'requestChanges',
         },
-        execution_stats: {
-          total_time_ms: 5000,
-          files_analyzed: 10,
-          lines_analyzed: 500,
+        executionStats: {
+          totalTimeMs: 5000,
+          filesAnalyzed: 10,
+          linesAnalyzed: 500,
         },
       };
 
@@ -196,30 +196,30 @@ describe('review.ts スキーマ', () => {
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.pr_number).toBe(123);
-        expect(result.data.summary.overall_score).toBe(7.5);
-        expect(result.data.summary.recommendation).toBe('request_changes');
+        expect(result.data.prNumber).toBe(123);
+        expect(result.data.summary.overallScore).toBe(7.5);
+        expect(result.data.summary.recommendation).toBe('requestChanges');
       }
     });
 
-    it('無効なoverall_scoreを拒否する', () => {
+    it('無効なoverallScoreを拒否する', () => {
       const invalidData = {
-        pr_number: 123,
+        prNumber: 123,
         repository: 'owner/repo',
-        review_id: 'review-456',
-        created_at: '2024-01-01T00:00:00Z',
-        agent_results: [],
+        reviewId: 'review-456',
+        createdAt: '2024-01-01T00:00:00Z',
+        agentResults: [],
         summary: {
-          total_comments: 0,
-          by_severity: { info: 0, warning: 0, error: 0, critical: 0 },
-          by_category: {},
-          overall_score: 15, // 範囲外の値
+          totalComments: 0,
+          bySeverity: { info: 0, warning: 0, error: 0, critical: 0 },
+          byCategory: {},
+          overallScore: 15, // 範囲外の値
           recommendation: 'approve',
         },
-        execution_stats: {
-          total_time_ms: 1000,
-          files_analyzed: 0,
-          lines_analyzed: 0,
+        executionStats: {
+          totalTimeMs: 1000,
+          filesAnalyzed: 0,
+          linesAnalyzed: 0,
         },
       };
 
@@ -236,7 +236,7 @@ describe('github.ts スキーマ', () => {
       const validData = {
         action: 'opened',
         number: 123,
-        pull_request: {
+        pullRequest: {
           id: 456,
           number: 123,
           title: 'Add new feature',
@@ -249,14 +249,14 @@ describe('github.ts スキーマ', () => {
             sha: 'def456',
             ref: 'main',
           },
-          changed_files: 5,
+          changedFiles: 5,
           additions: 100,
           deletions: 20,
         },
         repository: {
           id: 789,
           name: 'test-repo',
-          full_name: 'owner/test-repo',
+          fullName: 'owner/test-repo',
           owner: {
             login: 'owner',
           },
@@ -269,7 +269,7 @@ describe('github.ts スキーマ', () => {
       if (result.success) {
         expect(result.data.action).toBe('opened');
         expect(result.data.number).toBe(123);
-        expect(result.data.pull_request.title).toBe('Add new feature');
+        expect(result.data.pullRequest.title).toBe('Add new feature');
       }
     });
 
@@ -280,7 +280,7 @@ describe('github.ts スキーマ', () => {
         const data = {
           action,
           number: 1,
-          pull_request: {
+          pullRequest: {
             id: 1,
             number: 1,
             title: 'Test',
@@ -291,7 +291,7 @@ describe('github.ts スキーマ', () => {
           repository: {
             id: 1,
             name: 'test',
-            full_name: 'owner/test',
+            fullName: 'owner/test',
             owner: { login: 'owner' },
           },
         };
@@ -305,7 +305,7 @@ describe('github.ts スキーマ', () => {
       const invalidData = {
         action: 'invalid-action',
         number: 1,
-        pull_request: {
+        pullRequest: {
           id: 1,
           number: 1,
           title: 'Test',
@@ -316,7 +316,7 @@ describe('github.ts スキーマ', () => {
         repository: {
           id: 1,
           name: 'test',
-          full_name: 'owner/test',
+          fullName: 'owner/test',
           owner: { login: 'owner' },
         },
       };
@@ -336,7 +336,7 @@ describe('github.ts スキーマ', () => {
         changes: 15,
         patch: '@@ -1,3 +1,3 @@\n-old line\n+new line',
         sha: 'abc123',
-        blob_url: 'https://github.com/owner/repo/blob/abc123/src/index.ts',
+        blobUrl: 'https://github.com/owner/repo/blob/abc123/src/index.ts',
       };
 
       const result = FileChangeSchema.safeParse(validData);
@@ -360,7 +360,7 @@ describe('github.ts スキーマ', () => {
           deletions: 0,
           changes: 1,
           sha: 'abc123',
-          blob_url: 'https://example.com/blob',
+          blobUrl: 'https://example.com/blob',
         };
 
         const result = FileChangeSchema.safeParse(data);
@@ -387,7 +387,7 @@ describe('github.ts スキーマ', () => {
             deletions: 5,
             changes: 15,
             sha: 'abc123',
-            blob_url: 'https://example.com/blob',
+            blobUrl: 'https://example.com/blob',
           }
         ],
       };
@@ -453,15 +453,15 @@ describe('ヘルパー関数', () => {
 
   describe('ReviewCategoryHelpers', () => {
     it('すべてのカテゴリを含む', () => {
-      expect(ReviewCategoryHelpers.all).toEqual(['code_quality', 'security', 'performance', 'style', 'best_practices', 'bugs', 'maintainability']);
+      expect(ReviewCategoryHelpers.all).toEqual(['codeQuality', 'security', 'performance', 'style', 'bestPractices', 'bugs', 'maintainability']);
     });
 
     it('カテゴリの日本語表示名を正しく返す', () => {
-      expect(ReviewCategoryHelpers.getDisplayName('code_quality')).toBe('コード品質');
+      expect(ReviewCategoryHelpers.getDisplayName('codeQuality')).toBe('コード品質');
       expect(ReviewCategoryHelpers.getDisplayName('security')).toBe('セキュリティ');
       expect(ReviewCategoryHelpers.getDisplayName('performance')).toBe('パフォーマンス');
       expect(ReviewCategoryHelpers.getDisplayName('style')).toBe('スタイル');
-      expect(ReviewCategoryHelpers.getDisplayName('best_practices')).toBe('ベストプラクティス');
+      expect(ReviewCategoryHelpers.getDisplayName('bestPractices')).toBe('ベストプラクティス');
       expect(ReviewCategoryHelpers.getDisplayName('bugs')).toBe('バグ');
       expect(ReviewCategoryHelpers.getDisplayName('maintainability')).toBe('保守性');
     });

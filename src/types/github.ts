@@ -6,7 +6,7 @@ import { z } from 'zod';
 export const GitHubPREventSchema = z.object({
   action: z.enum(['opened', 'synchronize', 'reopened']),
   number: z.number(),
-  pull_request: z.object({
+  pullRequest: z.object({
     id: z.number(),
     number: z.number(),
     title: z.string(),
@@ -19,14 +19,14 @@ export const GitHubPREventSchema = z.object({
       sha: z.string(),
       ref: z.string(),
     }),
-    changed_files: z.number().optional(),
+    changedFiles: z.number().optional(),
     additions: z.number().optional(),
     deletions: z.number().optional(),
   }),
   repository: z.object({
     id: z.number(),
     name: z.string(),
-    full_name: z.string(),
+    fullName: z.string(),
     owner: z.object({
       login: z.string(),
     }),
@@ -46,7 +46,7 @@ export const FileChangeSchema = z.object({
   changes: z.number(),
   patch: z.string().optional(), // 差分内容
   sha: z.string(),
-  blob_url: z.string(),
+  blobUrl: z.string(),
 });
 
 export type FileChange = z.infer<typeof FileChangeSchema>;
