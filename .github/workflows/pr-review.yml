@@ -28,10 +28,10 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Build project
-        run: npm run build
+        run: |
+          npm ci --no-optional --legacy-peer-deps
+          npm rebuild
+          npm ls || true
 
       - name: Run PR Review Agent
         env:
@@ -48,4 +48,4 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
-        run: npm start
+        run: npm run dev

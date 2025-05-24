@@ -18,7 +18,8 @@
     "format:fix": "biome format --write src tests scripts",
     "check": "biome check src tests scripts",
     "check:fix": "biome check --write src tests scripts",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "postinstall": "patch-package"
   },
   "keywords": [
     "ai",
@@ -32,6 +33,7 @@
   "license": "MIT",
   "dependencies": {
     "@ai-sdk/openai": "^0.0.66",
+    "@n8n/json-schema-to-zod": "^1.1.0",
     "@octokit/rest": "^21.1.1",
     "@octokit/types": "^14.0.0",
     "@voltagent/anthropic-ai": "^0.1.6",
@@ -46,6 +48,7 @@
     "@types/cors": "^2.8.18",
     "@types/express": "^5.0.2",
     "@types/node": "^20.10.5",
+    "patch-package": "^8.0.0",
     "tsx": "^4.19.4",
     "typescript": "^5.3.3",
     "vitest": "^1.1.0"

@@ -1,0 +1,155 @@
+diff --git a/node_modules/@n8n/json-schema-to-zod/dist/esm/json-schema-to-zod.js b/node_modules/@n8n/json-schema-to-zod/dist/esm/json-schema-to-zod.js
+index dbb7070..91aa888 100644
+--- a/node_modules/@n8n/json-schema-to-zod/dist/esm/json-schema-to-zod.js
++++ b/node_modules/@n8n/json-schema-to-zod/dist/esm/json-schema-to-zod.js
+@@ -1,4 +1,4 @@
+-import { parseSchema } from './parsers/parse-schema';
++import { parseSchema } from './parsers/parse-schema.js';
+ export const jsonSchemaToZod = (schema, options = {}) => {
+     return parseSchema(schema, {
+         path: [],
+diff --git a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-all-of.js b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-all-of.js
+index ccab798..79790d1 100644
+--- a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-all-of.js
++++ b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-all-of.js
+@@ -1,5 +1,5 @@
+ import { z } from 'zod';
+-import { parseSchema } from './parse-schema';
++import { parseSchema } from './parse-schema.js';
+ import { half } from '../utils/half';
+ const originalIndex = Symbol('Original index');
+ const ensureOriginalIndex = (arr) => {
+diff --git a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-any-of.js b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-any-of.js
+index 2dff090..b9aabe2 100644
+--- a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-any-of.js
++++ b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-any-of.js
+@@ -1,5 +1,5 @@
+ import { z } from 'zod';
+-import { parseSchema } from './parse-schema';
++import { parseSchema } from './parse-schema.js';
+ export const parseAnyOf = (jsonSchema, refs) => {
+     return jsonSchema.anyOf.length
+         ? jsonSchema.anyOf.length === 1
+diff --git a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-array.js b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-array.js
+index af34a52..2dacdc7 100644
+--- a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-array.js
++++ b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-array.js
+@@ -1,5 +1,5 @@
+ import { z } from 'zod';
+-import { parseSchema } from './parse-schema';
++import { parseSchema } from './parse-schema.js';
+ import { extendSchemaWithMessage } from '../utils/extend-schema';
+ export const parseArray = (jsonSchema, refs) => {
+     if (Array.isArray(jsonSchema.items)) {
+diff --git a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-if-then-else.js b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-if-then-else.js
+index b54f467..4a2ebb3 100644
+--- a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-if-then-else.js
++++ b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-if-then-else.js
+@@ -1,5 +1,5 @@
+ import { z } from 'zod';
+-import { parseSchema } from './parse-schema';
++import { parseSchema } from './parse-schema.js';
+ export const parseIfThenElse = (jsonSchema, refs) => {
+     const $if = parseSchema(jsonSchema.if, { ...refs, path: [...refs.path, 'if'] });
+     const $then = parseSchema(jsonSchema.then, {
+diff --git a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-multiple-type.js b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-multiple-type.js
+index b0094d6..bff1ebd 100644
+--- a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-multiple-type.js
++++ b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-multiple-type.js
+@@ -1,5 +1,5 @@
+ import { z } from 'zod';
+-import { parseSchema } from './parse-schema';
++import { parseSchema } from './parse-schema.js';
+ export const parseMultipleType = (jsonSchema, refs) => {
+     return z.union(jsonSchema.type.map((type) => parseSchema({ ...jsonSchema, type }, refs)));
+ };
+diff --git a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-not.js b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-not.js
+index a0a9be5..400cbba 100644
+--- a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-not.js
++++ b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-not.js
+@@ -1,5 +1,5 @@
+ import { z } from 'zod';
+-import { parseSchema } from './parse-schema';
++import { parseSchema } from './parse-schema.js';
+ export const parseNot = (jsonSchema, refs) => {
+     return z.any().refine((value) => !parseSchema(jsonSchema.not, {
+         ...refs,
+diff --git a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-nullable.js b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-nullable.js
+index 488357f..817e128 100644
+--- a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-nullable.js
++++ b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-nullable.js
+@@ -1,4 +1,4 @@
+-import { parseSchema } from './parse-schema';
++import { parseSchema } from './parse-schema.js';
+ import { omit } from '../utils/omit';
+ /**
+  * For compatibility with open api 3.0 nullable
+diff --git a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-object.js b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-object.js
+index 9d4f724..ceee636 100644
+--- a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-object.js
++++ b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-object.js
+@@ -1,8 +1,8 @@
+ import * as z from 'zod';
+-import { parseAllOf } from './parse-all-of';
+-import { parseAnyOf } from './parse-any-of';
+-import { parseOneOf } from './parse-one-of';
+-import { parseSchema } from './parse-schema';
++import { parseAllOf } from './parse-all-of.js';
++import { parseAnyOf } from './parse-any-of.js';
++import { parseOneOf } from './parse-one-of.js';
++import { parseSchema } from './parse-schema.js';
+ import { its } from '../utils/its';
+ function parseObjectProperties(objectSchema, refs) {
+     if (!objectSchema.properties) {
+diff --git a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-one-of.js b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-one-of.js
+index 5c37c4f..134a2ea 100644
+--- a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-one-of.js
++++ b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-one-of.js
+@@ -1,5 +1,5 @@
+ import { z } from 'zod';
+-import { parseSchema } from './parse-schema';
++import { parseSchema } from './parse-schema.js';
+ export const parseOneOf = (jsonSchema, refs) => {
+     if (!jsonSchema.oneOf.length) {
+         return z.any();
+diff --git a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-schema.js b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-schema.js
+index 7866a4d..22bb191 100644
+--- a/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-schema.js
++++ b/node_modules/@n8n/json-schema-to-zod/dist/esm/parsers/parse-schema.js
+@@ -1,20 +1,20 @@
+ import * as z from 'zod';
+-import { parseAllOf } from './parse-all-of';
+-import { parseAnyOf } from './parse-any-of';
+-import { parseArray } from './parse-array';
+-import { parseBoolean } from './parse-boolean';
+-import { parseConst } from './parse-const';
+-import { parseDefault } from './parse-default';
+-import { parseEnum } from './parse-enum';
+-import { parseIfThenElse } from './parse-if-then-else';
+-import { parseMultipleType } from './parse-multiple-type';
+-import { parseNot } from './parse-not';
+-import { parseNull } from './parse-null';
+-import { parseNullable } from './parse-nullable';
+-import { parseNumber } from './parse-number';
+-import { parseObject } from './parse-object';
+-import { parseOneOf } from './parse-one-of';
+-import { parseString } from './parse-string';
++import { parseAllOf } from './parse-all-of.js';
++import { parseAnyOf } from './parse-any-of.js';
++import { parseArray } from './parse-array.js';
++import { parseBoolean } from './parse-boolean.js';
++import { parseConst } from './parse-const.js';
++import { parseDefault } from './parse-default.js';
++import { parseEnum } from './parse-enum.js';
++import { parseIfThenElse } from './parse-if-then-else.js';
++import { parseMultipleType } from './parse-multiple-type.js';
++import { parseNot } from './parse-not.js';
++import { parseNull } from './parse-null.js';
++import { parseNullable } from './parse-nullable.js';
++import { parseNumber } from './parse-number.js';
++import { parseObject } from './parse-object.js';
++import { parseOneOf } from './parse-one-of.js';
++import { parseString } from './parse-string.js';
+ import { its } from '../utils/its';
+ const addDescribes = (jsonSchema, zodSchema) => {
+     if (jsonSchema.description) {
