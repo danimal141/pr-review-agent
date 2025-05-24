@@ -6,12 +6,11 @@ import { createCodeAnalysisAgent } from './agents/code-analysis.js';
 import { createSecurityAgent } from './agents/security.js';
 import { createStyleAgent } from './agents/style.js';
 import { createSummaryAgent, SummaryAgentHelpers } from './agents/summary.js';
-import { createGitHubAPITool } from './tools/github-api.js';
 import { FileAnalyzerTool } from './tools/file-analyzer.js';
 import { SecurityScannerTool } from './tools/security-scanner.js';
 import { CodeMetricsTool } from './tools/code-metrics.js';
 import { ReviewResult, AgentResult, ReviewComment } from './types/review.js';
-import { GitHubPREvent, PRInfo } from './types/github.js';
+import { CodeAnalysisRequest, AnalysisResult } from './types/analysis.js';
 
 /**
  * PRレビューワークフローのメインクラス
