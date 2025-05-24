@@ -3,6 +3,7 @@ import { VercelAIProvider } from '@voltagent/vercel-ai';
 import { openai } from '@ai-sdk/openai';
 import { FileChange } from '../types/github.js';
 import { ReviewComment, ReviewSeverity, ReviewCategory } from '../types/review.js';
+import { StyleAgent } from '../types/agents.js';
 
 /**
  * StyleAgentの作成
@@ -13,7 +14,7 @@ import { ReviewComment, ReviewSeverity, ReviewCategory } from '../types/review.j
  * - 命名規則の確認
  * - フォーマットとレイアウトのチェック
  */
-export function createStyleAgent() {
+export function createStyleAgent(): StyleAgent {
   return new Agent({
     name: 'style-agent',
     instructions: `あなたはコーディングスタイルとベストプラクティスの専門家です。コードの品質向上とチーム開発における一貫性を重視します。

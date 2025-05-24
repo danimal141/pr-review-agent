@@ -3,6 +3,7 @@ import { VercelAIProvider } from '@voltagent/vercel-ai';
 import { openai } from '@ai-sdk/openai';
 import { FileChange } from '../types/github.js';
 import { ReviewComment, ReviewSeverity, ReviewCategory } from '../types/review.js';
+import { SecurityAgent } from '../types/agents.js';
 
 /**
  * SecurityAgentの作成
@@ -13,7 +14,7 @@ import { ReviewComment, ReviewSeverity, ReviewCategory } from '../types/review.j
  * - データ漏洩リスクの評価
  * - セキュリティベストプラクティスの確認
  */
-export function createSecurityAgent() {
+export function createSecurityAgent(): SecurityAgent {
   return new Agent({
     name: 'security-agent',
     instructions: `あなたはサイバーセキュリティの専門家です。コードのセキュリティ脆弱性を検出し、改善提案を行います。

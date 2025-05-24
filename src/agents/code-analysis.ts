@@ -3,6 +3,7 @@ import { VercelAIProvider } from '@voltagent/vercel-ai';
 import { openai } from '@ai-sdk/openai';
 import { FileChange } from '../types/github.js';
 import { ReviewComment, ReviewSeverity, ReviewCategory } from '../types/review.js';
+import { CodeAnalysisAgent } from '../types/agents.js';
 
 /**
  * CodeAnalysisAgentの作成
@@ -14,7 +15,7 @@ import { ReviewComment, ReviewSeverity, ReviewCategory } from '../types/review.j
  * - 複雑度の分析
  * - パフォーマンスの評価
  */
-export function createCodeAnalysisAgent() {
+export function createCodeAnalysisAgent(): CodeAnalysisAgent {
   return new Agent({
     name: 'code-analysis-agent',
     instructions: `あなたはコード品質解析の専門家です。

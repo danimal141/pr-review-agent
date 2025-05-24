@@ -10,6 +10,7 @@
     "start": "node dist/index.js",
     "test": "vitest -w false",
     "test:watch": "vitest --watch",
+    "test:agents": "tsx scripts/test-agents.ts",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "type-check": "tsc --noEmit"
@@ -25,21 +26,24 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@voltagent/core": "^0.1.19",
-    "@voltagent/vercel-ai": "^0.1.8",
-    "@voltagent/anthropic-ai": "^0.1.6",
-    "@voltagent/google-ai": "^0.3.9",
+    "@actions/core": "^1.10.1",
+    "@actions/github": "^6.0.0",
+    "@ai-sdk/openai": "^0.0.66",
     "@octokit/rest": "^20.0.2",
     "@octokit/types": "^12.4.0",
-    "zod": "^3.22.4",
-    "dotenv": "^16.3.1"
+    "@voltagent/anthropic-ai": "^0.1.6",
+    "@voltagent/core": "^0.1.19",
+    "@voltagent/google-ai": "^0.3.9",
+    "@voltagent/vercel-ai": "^0.1.8",
+    "dotenv": "^16.3.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^20.10.5",
     "@typescript-eslint/eslint-plugin": "^6.16.0",
     "@typescript-eslint/parser": "^6.16.0",
     "eslint": "^8.56.0",
-    "tsx": "^4.6.2",
+    "tsx": "^4.19.4",
     "typescript": "^5.3.3",
     "vitest": "^1.1.0"
   },

@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { GitHubPREvent, FileChange } from '../types/github.js';
 import { ReviewCategory, ReviewResult, AgentResult } from '../types/review.js';
 import { logger } from '../utils/logger.js';
+import { SupervisorAgent } from '../types/agents.js';
 
 /**
  * SupervisorAgentの作成
@@ -15,7 +16,7 @@ import { logger } from '../utils/logger.js';
  * - レビュー結果の統合
  * - フィードバックの生成
  */
-export function createSupervisorAgent() {
+export function createSupervisorAgent(): SupervisorAgent {
   return new Agent({
     name: 'supervisor-agent',
     instructions: `あなたはPRレビューを統括するSupervisorAgentです。
