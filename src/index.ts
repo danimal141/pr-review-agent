@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import { logger } from './utils/logger.js';
-import { config } from './utils/config.js';
 import { createSupervisorAgent } from './agents/supervisor.js';
 import { createCodeAnalysisAgent } from './agents/code-analysis.js';
 import { createSecurityAgent } from './agents/security.js';
@@ -10,7 +9,8 @@ import { FileAnalyzerTool } from './tools/file-analyzer.js';
 import { SecurityScannerTool } from './tools/security-scanner.js';
 import { CodeMetricsTool } from './tools/code-metrics.js';
 import { ReviewResult, AgentResult, ReviewComment } from './types/review.js';
-import { CodeAnalysisRequest, AnalysisResult } from './types/analysis.js';
+import { createGitHubAPITool } from './tools/github-api.js';
+import { GitHubPREvent, PRInfo } from './types/github.js';
 
 /**
  * PRレビューワークフローのメインクラス
