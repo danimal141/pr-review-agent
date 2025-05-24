@@ -1,6 +1,28 @@
 import { Tool } from "@voltagent/core";
 import { z } from "zod";
 
+// 型定義を追加
+interface Recommendation {
+  priority: string;
+  category: string;
+  title: string;
+  description: string;
+  action: string;
+  estimatedEffort?: string;
+}
+
+interface Finding {
+  title: string;
+  filename: string;
+  description: string;
+}
+
+interface FileImpact {
+  filename: string;
+  riskScore: number;
+  comments: number;
+}
+
 /**
  * エージェント結果を統合するツール
  */
@@ -162,33 +184,37 @@ export const generateRecommendationsTool = new Tool({
       .object({
         totalStats: z.object({
           totalComments: z.number(),
-          bySeverity: z.record(z.number()),
+          bySeverity: z.object({
+            critical: z.number(),
+            error: z.number(),
+            warning: z.number(),
+            info: z.number(),
+          }),
           byCategory: z.record(z.number()),
         }),
         fileImpactAnalysis: z.array(
           z.object({
             filename: z.string(),
-            comments: z.number(),
             riskScore: z.number(),
-            categories: z.array(z.string()),
+            comments: z.number(),
           })
         ),
-        criticalFindings: z.array(
-          z.object({
-            filename: z.string(),
-            severity: z.string(),
-            category: z.string(),
-            title: z.string(),
-            description: z.string(),
-          })
-        ),
+        criticalFindings: z
+          .array(
+            z.object({
+              title: z.string(),
+              filename: z.string(),
+              description: z.string(),
+            })
+          )
+          .optional(),
       })
       .describe("統合されたレポートデータ"),
   }),
   execute: async ({ consolidatedReport }) => {
     try {
-      const recommendations = [];
-      const { totalStats, fileImpactAnalysis, criticalFindings } = consolidatedReport;
+      const recommendations: Recommendation[] = [];
+      const { totalStats, fileImpactAnalysis } = consolidatedReport;
 
       // 緊急対応が必要な項目
       if (totalStats.bySeverity.critical > 0) {
@@ -309,8 +335,48 @@ export const generateSummaryReportTool = new Tool({
   name: "generate_summary_report",
   description: "最終的な包括的サマリーレポートをMarkdown形式で生成します",
   parameters: z.object({
-    consolidatedReport: z.any().describe("統合されたレポートデータ"),
-    recommendations: z.any().describe("推奨事項データ"),
+    consolidatedReport: z
+      .object({
+        totalStats: z.object({
+          totalComments: z.number(),
+          bySeverity: z.object({
+            critical: z.number(),
+            error: z.number(),
+            warning: z.number(),
+            info: z.number(),
+          }),
+          byCategory: z.record(z.number()),
+        }),
+        fileImpactAnalysis: z.array(
+          z.object({
+            filename: z.string(),
+            riskScore: z.number(),
+            comments: z.number(),
+          })
+        ),
+        criticalFindings: z
+          .array(
+            z.object({
+              title: z.string(),
+              filename: z.string(),
+              description: z.string(),
+            })
+          )
+          .optional(),
+      })
+      .describe("統合されたレポートデータ"),
+    recommendations: z
+      .array(
+        z.object({
+          priority: z.string(),
+          category: z.string(),
+          title: z.string(),
+          description: z.string(),
+          action: z.string(),
+          estimatedEffort: z.string().optional(),
+        })
+      )
+      .describe("推奨事項データ"),
     overallAssessment: z
       .object({
         score: z.number(),
@@ -339,7 +405,7 @@ export const generateSummaryReportTool = new Tool({
 ${recommendations
   .slice(0, 5)
   .map(
-    (rec: any, index: number) =>
+    (rec: Recommendation, index: number) =>
       `${index + 1}. **${rec.title}** (${rec.priority})\n   ${rec.description}\n   💡 ${rec.action}`
   )
   .join("\n\n")}
@@ -348,19 +414,23 @@ ${recommendations
 ${consolidatedReport.fileImpactAnalysis
   .slice(0, 5)
   .map(
-    (file: any, index: number) =>
+    (file: FileImpact, index: number) =>
       `${index + 1}. \`${file.filename}\` - リスクスコア: ${file.riskScore} (${file.comments}件の問題)`
   )
   .join("\n")}
 
 ## 🔍 重要な発見事項
-${consolidatedReport.criticalFindings
-  .slice(0, 3)
-  .map(
-    (finding: any, index: number) =>
-      `${index + 1}. **${finding.title}** in \`${finding.filename}\`\n   ${finding.description}`
-  )
-  .join("\n\n")}
+${
+  consolidatedReport.criticalFindings
+    ? consolidatedReport.criticalFindings
+        .slice(0, 3)
+        .map(
+          (finding: Finding, index: number) =>
+            `${index + 1}. **${finding.title}** in \`${finding.filename}\`\n   ${finding.description}`
+        )
+        .join("\n\n")
+    : "重要な発見事項はありません"
+}
 
 ---
 *このレポートは AI によって自動生成されました。詳細な分析結果は個別のコメントをご確認ください。*`;
@@ -373,8 +443,9 @@ ${consolidatedReport.criticalFindings
           overallScore: overallAssessment.score,
           recommendation: overallAssessment.recommendation,
           criticalIssues: consolidatedReport.totalStats.bySeverity.critical || 0,
-          highRiskFiles: consolidatedReport.fileImpactAnalysis.filter((f: any) => f.riskScore > 20)
-            .length,
+          highRiskFiles: consolidatedReport.fileImpactAnalysis.filter(
+            (f: FileImpact) => f.riskScore > 20
+          ).length,
         },
       };
     } catch (error) {

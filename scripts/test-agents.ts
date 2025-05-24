@@ -5,7 +5,6 @@ import { createCodeAnalysisAgent } from "../src/agents/code-analysis.js";
 import { createSecurityAgent } from "../src/agents/security.js";
 import { createStyleAgent } from "../src/agents/style.js";
 import { createSummaryAgent } from "../src/agents/summary.js";
-import { logger } from "../src/utils/logger.js";
 
 /**
  * エージェントの基本動作確認スクリプト

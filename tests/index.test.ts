@@ -1,7 +1,8 @@
 import "dotenv/config";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { PRReviewAgent } from "../src/types/agents.js";
 import type { GitHubPREvent, PRInfo } from "../src/types/github.js";
-import type { ReviewResult } from "../src/types/review.js";
+import type { AgentResult, ReviewComment, ReviewResult } from "../src/types/review.js";
 
 // VoltAgentの依存関係をモック
 vi.mock("@voltagent/core", () => ({
@@ -112,6 +113,39 @@ vi.mock("../src/tools/github-api.js", () => ({
 // PRReviewWorkflowをmock後にインポート
 const { PRReviewWorkflow } = await import("../src/index.js");
 
+// PRReviewWorkflowの内部プロパティの型定義
+interface WorkflowInternal {
+  githubAPI: { getPRInfo: (owner: string, repo: string, number: number) => Promise<PRInfo> };
+  supervisorAgent: PRReviewAgent;
+  codeAnalysisAgent: PRReviewAgent;
+  securityAgent: PRReviewAgent;
+  styleAgent: PRReviewAgent;
+  summaryAgent: PRReviewAgent;
+  getPRInfo: (prEvent: GitHubPREvent) => Promise<PRInfo>;
+  runSpecializedAgents: (prInfo: PRInfo) => Promise<AgentResult[]>;
+  runCodeAnalysisAgent: (prInfo: PRInfo) => Promise<AgentResult>;
+  runSecurityAgent: (prInfo: PRInfo) => Promise<AgentResult>;
+  runStyleAgent: (prInfo: PRInfo) => Promise<AgentResult>;
+  generateSummary: (agentResults: AgentResult[]) => Promise<unknown>;
+  parseAgentResponse: (response: string, agentName: string) => ReviewComment[];
+  createErrorResult: (agentName: string, error: Error | unknown) => AgentResult;
+  postReviewToGitHub: (
+    prInfo: PRInfo,
+    reviewResult: ReviewResult,
+    summaryResult: unknown
+  ) => Promise<void>;
+  createSummaryComment: (reviewResult: ReviewResult, summaryResult: unknown) => string;
+  formatReviewComment: (comment: ReviewComment) => string;
+  getSeverityPriority: (severity: string) => number;
+  mapRecommendation: (recommendation: string) => "approve" | "requestChanges" | "comment";
+}
+
+// 無効なPREvent型定義
+interface InvalidPREvent {
+  number: null;
+  repository: null;
+}
+
 /**
  * PRReviewWorkflowのメインテストスイート
  */
@@ -131,52 +165,52 @@ describe("PRReviewWorkflow", () => {
 
     it("すべてのエージェントが初期化される", () => {
       // プライベートプロパティなので、型アサーションで確認
-      const workflowAny = workflow as any;
+      const workflowInternal = workflow as unknown as WorkflowInternal;
 
-      expect(workflowAny.supervisorAgent).toBeDefined();
-      expect(workflowAny.codeAnalysisAgent).toBeDefined();
-      expect(workflowAny.securityAgent).toBeDefined();
-      expect(workflowAny.styleAgent).toBeDefined();
-      expect(workflowAny.summaryAgent).toBeDefined();
-      expect(workflowAny.githubAPI).toBeDefined();
+      expect(workflowInternal.supervisorAgent).toBeDefined();
+      expect(workflowInternal.codeAnalysisAgent).toBeDefined();
+      expect(workflowInternal.securityAgent).toBeDefined();
+      expect(workflowInternal.styleAgent).toBeDefined();
+      expect(workflowInternal.summaryAgent).toBeDefined();
+      expect(workflowInternal.githubAPI).toBeDefined();
     });
   });
 
   describe("エージェント設定確認", () => {
     it("SupervisorAgentが正しく設定される", () => {
-      const workflowAny = workflow as any;
-      expect(typeof workflowAny.supervisorAgent).toBe("object");
-      expect(workflowAny.supervisorAgent).not.toBeNull();
+      const workflowInternal = workflow as unknown as WorkflowInternal;
+      expect(typeof workflowInternal.supervisorAgent).toBe("object");
+      expect(workflowInternal.supervisorAgent).not.toBeNull();
     });
 
     it("CodeAnalysisAgentがツール付きで設定される", () => {
-      const workflowAny = workflow as any;
-      expect(typeof workflowAny.codeAnalysisAgent).toBe("object");
-      expect(workflowAny.codeAnalysisAgent).not.toBeNull();
+      const workflowInternal = workflow as unknown as WorkflowInternal;
+      expect(typeof workflowInternal.codeAnalysisAgent).toBe("object");
+      expect(workflowInternal.codeAnalysisAgent).not.toBeNull();
     });
 
     it("SecurityAgentがツール付きで設定される", () => {
-      const workflowAny = workflow as any;
-      expect(typeof workflowAny.securityAgent).toBe("object");
-      expect(workflowAny.securityAgent).not.toBeNull();
+      const workflowInternal = workflow as unknown as WorkflowInternal;
+      expect(typeof workflowInternal.securityAgent).toBe("object");
+      expect(workflowInternal.securityAgent).not.toBeNull();
     });
 
     it("StyleAgentがツール付きで設定される", () => {
-      const workflowAny = workflow as any;
-      expect(typeof workflowAny.styleAgent).toBe("object");
-      expect(workflowAny.styleAgent).not.toBeNull();
+      const workflowInternal = workflow as unknown as WorkflowInternal;
+      expect(typeof workflowInternal.styleAgent).toBe("object");
+      expect(workflowInternal.styleAgent).not.toBeNull();
     });
 
     it("SummaryAgentがツール付きで設定される", () => {
-      const workflowAny = workflow as any;
-      expect(typeof workflowAny.summaryAgent).toBe("object");
-      expect(workflowAny.summaryAgent).not.toBeNull();
+      const workflowInternal = workflow as unknown as WorkflowInternal;
+      expect(typeof workflowInternal.summaryAgent).toBe("object");
+      expect(workflowInternal.summaryAgent).not.toBeNull();
     });
 
     it("GitHubAPIが正しく設定される", () => {
-      const workflowAny = workflow as any;
-      expect(typeof workflowAny.githubAPI).toBe("object");
-      expect(workflowAny.githubAPI).not.toBeNull();
+      const workflowInternal = workflow as unknown as WorkflowInternal;
+      expect(typeof workflowInternal.githubAPI).toBe("object");
+      expect(workflowInternal.githubAPI).not.toBeNull();
     });
   });
 
@@ -264,10 +298,10 @@ describe("PRReviewWorkflow", () => {
   describe("エラーハンドリング", () => {
     it("無効なPREventでもエラーが発生しない", () => {
       expect(() => {
-        const invalidPREvent = {
+        const invalidPREvent: InvalidPREvent = {
           number: null,
           repository: null,
-        } as any;
+        };
 
         // インスタンス作成時点ではエラーは発生しない
         expect(invalidPREvent).toBeDefined();
@@ -277,24 +311,24 @@ describe("PRReviewWorkflow", () => {
 
   describe("ワークフロー統合テスト", () => {
     it("全コンポーネントが連携可能な状態である", () => {
-      const workflowAny = workflow as any;
+      const workflowInternal = workflow as unknown as WorkflowInternal;
 
       // 各エージェントがメソッドを持つことを確認
-      expect(typeof workflowAny.codeAnalysisAgent?.generateText).toBe("function");
-      expect(typeof workflowAny.securityAgent?.generateText).toBe("function");
-      expect(typeof workflowAny.styleAgent?.generateText).toBe("function");
-      expect(typeof workflowAny.summaryAgent?.generateText).toBe("function");
+      expect(typeof workflowInternal.codeAnalysisAgent?.generateText).toBe("function");
+      expect(typeof workflowInternal.securityAgent?.generateText).toBe("function");
+      expect(typeof workflowInternal.styleAgent?.generateText).toBe("function");
+      expect(typeof workflowInternal.summaryAgent?.generateText).toBe("function");
     });
 
     it("ツールが正しく設定されていることを確認", () => {
       // ツール配列が設定されていることを間接的に確認
-      const workflowAny = workflow as any;
+      const workflowInternal = workflow as unknown as WorkflowInternal;
 
       // エージェントが存在することでツールも正しく設定されていると推定
-      expect(workflowAny.codeAnalysisAgent).toBeTruthy();
-      expect(workflowAny.securityAgent).toBeTruthy();
-      expect(workflowAny.styleAgent).toBeTruthy();
-      expect(workflowAny.summaryAgent).toBeTruthy();
+      expect(workflowInternal.codeAnalysisAgent).toBeTruthy();
+      expect(workflowInternal.securityAgent).toBeTruthy();
+      expect(workflowInternal.styleAgent).toBeTruthy();
+      expect(workflowInternal.summaryAgent).toBeTruthy();
     });
   });
 
@@ -304,22 +338,22 @@ describe("PRReviewWorkflow", () => {
     });
 
     it("プライベートメソッドが適切に定義されている", () => {
-      const workflowAny = workflow as any;
+      const workflowInternal = workflow as unknown as WorkflowInternal;
 
       // プライベートメソッドの存在確認
-      expect(typeof workflowAny.getPRInfo).toBe("function");
-      expect(typeof workflowAny.runSpecializedAgents).toBe("function");
-      expect(typeof workflowAny.runCodeAnalysisAgent).toBe("function");
-      expect(typeof workflowAny.runSecurityAgent).toBe("function");
-      expect(typeof workflowAny.runStyleAgent).toBe("function");
-      expect(typeof workflowAny.generateSummary).toBe("function");
-      expect(typeof workflowAny.parseAgentResponse).toBe("function");
-      expect(typeof workflowAny.createErrorResult).toBe("function");
-      expect(typeof workflowAny.postReviewToGitHub).toBe("function");
-      expect(typeof workflowAny.createSummaryComment).toBe("function");
-      expect(typeof workflowAny.formatReviewComment).toBe("function");
-      expect(typeof workflowAny.getSeverityPriority).toBe("function");
-      expect(typeof workflowAny.mapRecommendation).toBe("function");
+      expect(typeof workflowInternal.getPRInfo).toBe("function");
+      expect(typeof workflowInternal.runSpecializedAgents).toBe("function");
+      expect(typeof workflowInternal.runCodeAnalysisAgent).toBe("function");
+      expect(typeof workflowInternal.runSecurityAgent).toBe("function");
+      expect(typeof workflowInternal.runStyleAgent).toBe("function");
+      expect(typeof workflowInternal.generateSummary).toBe("function");
+      expect(typeof workflowInternal.parseAgentResponse).toBe("function");
+      expect(typeof workflowInternal.createErrorResult).toBe("function");
+      expect(typeof workflowInternal.postReviewToGitHub).toBe("function");
+      expect(typeof workflowInternal.createSummaryComment).toBe("function");
+      expect(typeof workflowInternal.formatReviewComment).toBe("function");
+      expect(typeof workflowInternal.getSeverityPriority).toBe("function");
+      expect(typeof workflowInternal.mapRecommendation).toBe("function");
     });
   });
 

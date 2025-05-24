@@ -193,7 +193,7 @@ export const detectCodeQualityIssuesTool = new Tool({
               title: "長すぎる行",
               description: `行が${content.length}文字です。120文字以下が推奨されます。`,
               suggestion: "行を分割して可読性を向上させてください。",
-              codeSnippet: content.substring(0, 100) + "...",
+              codeSnippet: `${content.substring(0, 100)}...`,
             });
           }
 
