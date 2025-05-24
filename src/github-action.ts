@@ -13,7 +13,25 @@ export class GitHubActionEntrypoint {
   private workflow: PRReviewWorkflow;
 
   constructor() {
-    this.workflow = new PRReviewWorkflow();
+    try {
+      logger.info('GitHubAction', 'PRReviewWorkflow 初期化開始');
+      this.workflow = new PRReviewWorkflow();
+      logger.info('GitHubAction', 'PRReviewWorkflow 初期化完了');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('GitHubAction', `PRReviewWorkflow 初期化エラー: ${errorMessage}`);
+
+      // 依存関係の問題の可能性をチェック
+      if (errorMessage.includes('Cannot find module') || errorMessage.includes('MODULE_NOT_FOUND')) {
+        throw new Error(`依存関係の問題: ${errorMessage}\n\nnpm ci を実行して依存関係を再インストールしてください。`);
+      }
+
+      if (errorMessage.includes('VoltAgent') || errorMessage.includes('voltagent')) {
+        throw new Error(`VoltAgent 初期化エラー: ${errorMessage}\n\n依存関係 @voltagent/* の問題の可能性があります。`);
+      }
+
+      throw error;
+    }
   }
 
   /**
@@ -102,7 +120,36 @@ export class GitHubActionEntrypoint {
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
     if (missingVars.length > 0) {
-      throw new Error(`必須環境変数が設定されていません: ${missingVars.join(', ')}`);
+      const errorMessage = `必須環境変数が設定されていません: ${missingVars.join(', ')}`;
+
+      // 詳細な設定ガイドを追加
+      let setupGuide = '\n\n🔧 設定ガイド:\n';
+
+      if (missingVars.includes('OPENAI_API_KEY')) {
+        setupGuide += `
+📝 OPENAI_API_KEY の設定方法:
+1. GitHub リポジトリのページに移動
+2. Settings → Secrets and variables → Actions をクリック
+3. "New repository secret" をクリック
+4. Name: OPENAI_API_KEY
+5. Secret: あなたのOpenAI APIキーを入力
+6. "Add secret" をクリック
+
+⚠️ 注意: APIキーは sk- で始まる文字列です。
+OpenAI APIキーは https://platform.openai.com/api-keys で取得できます。
+`;
+      }
+
+      if (missingVars.includes('GITHUB_TOKEN')) {
+        setupGuide += `
+📝 GITHUB_TOKEN について:
+GITHUB_TOKEN は通常自動で設定されます。
+この変数が見つからない場合は、GitHub Actions の権限設定を確認してください。
+`;
+      }
+
+      logger.error('GitHubAction', errorMessage + setupGuide);
+      throw new Error(errorMessage + setupGuide);
     }
 
     // GitHub Actionsコンテキストのチェック
