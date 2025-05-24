@@ -1,0 +1,49 @@
+{
+  "name": "pr-review-agent",
+  "version": "0.1.0",
+  "description": "VoltAgentを使用したGitHub PRレビューエージェント",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest -w false",
+    "test:watch": "vitest --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "github",
+    "pr-review",
+    "voltagent",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@voltagent/core": "^0.1.19",
+    "@voltagent/vercel-ai": "^0.1.8",
+    "@voltagent/anthropic-ai": "^0.1.6",
+    "@voltagent/google-ai": "^0.3.9",
+    "@octokit/rest": "^20.0.2",
+    "@octokit/types": "^12.4.0",
+    "zod": "^3.22.4",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@typescript-eslint/eslint-plugin": "^6.16.0",
+    "@typescript-eslint/parser": "^6.16.0",
+    "eslint": "^8.56.0",
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
