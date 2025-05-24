@@ -1,0 +1,144 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# TypeScript + VoltAgent 技術ルール
+
+## VoltAgentアーキテクチャ
+
+### エージェント作成パターン
+```typescript
+import { Agent } from '@voltagent/core';
+import { VercelAIProvider } from '@voltagent/vercel-ai';
+
+// ✅ 正しいエージェント作成
+const agent = new Agent({
+  name: 'agent-name',
+  instructions: `詳細な指示...`,
+  llm: new VercelAIProvider(),
+  model: openai('gpt-4o-mini'),
+});
+```
+
+### プロバイダー使い分け
+- `@voltagent/vercel-ai`: OpenAI、Google、Anthropic等の統合プロバイダー
+- `@voltagent/anthropic-ai`: Claude専用最適化
+- `@voltagent/google-ai`: Gemini専用最適化
+
+### ツール実装パターン
+```typescript
+import { z } from 'zod';
+
+// ✅ Zodスキーマ必須
+export const MyToolInputSchema = z.object({
+  input: z.string(),
+  options: z.object({...}).optional(),
+});
+
+export const MyToolOutputSchema = z.object({
+  result: z.string(),
+  metadata: z.record(z.any()).optional(),
+});
+```
+
+## TypeScript固有ルール
+
+### 型定義
+- `z.infer<typeof Schema>`で型を導出
+- `enum`使用禁止、`z.enum()`を使用
+- `any`使用禁止、適切な型定義を行う
+- オプショナル型は明確に`?`または`.optional()`で定義
+
+### import/export
+```typescript
+// ✅ ESModules形式
+import { config } from './utils/config.js';
+export type { ReviewResult } from './types/review.js';
+
+// ❌ CommonJS禁止
+const config = require('./config');
+```
+
+### エラーハンドリング
+```typescript
+// ✅ 型安全なエラーハンドリング
+try {
+  const result = await someOperation();
+  logger.info('操作成功', { result });
+} catch (error) {
+  logger.logError(error as Error, { context: 'someOperation' });
+  throw new Error('操作に失敗しました');
+}
+```
+
+## Zodスキーマ設計
+
+### レスポンシブスキーマ
+```typescript
+// ✅ 段階的なスキーマ構築
+const BaseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
+const ExtendedSchema = BaseSchema.extend({
+  metadata: z.record(z.any()).optional(),
+});
+```
+
+### バリデーション最適化
+```typescript
+// ✅ safeParse使用でエラー制御
+const result = MySchema.safeParse(input);
+if (!result.success) {
+  logger.warn('バリデーション失敗', {
+    errors: result.error.errors,
+    input
+  });
+  return { success: false, error: result.error };
+}
+```
+
+## 非同期処理
+
+### Promise/async-await
+```typescript
+// ✅ 適切な非同期処理
+async function processAgents(agents: Agent[]): Promise<AgentResult[]> {
+  const results = await Promise.allSettled(
+    agents.map(agent => agent.execute())
+  );
+
+  return results.map((result, index) => ({
+    agent: agents[index].name,
+    success: result.status === 'fulfilled',
+    data: result.status === 'fulfilled' ? result.value : undefined,
+    error: result.status === 'rejected' ? result.reason : undefined,
+  }));
+}
+```
+
+### タイムアウト処理
+```typescript
+// ✅ タイムアウト付き実行
+const timeoutMs = 30000;
+const result = await Promise.race([
+  operation(),
+  new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Timeout')), timeoutMs)
+  )
+]);
+```
+
+## パフォーマンス最適化
+
+### メモリ効率
+- 大量データはStream処理
+- 使用後のオブジェクトは明示的にnull設定
+- WeakMapを活用してメモリリーク防止
+
+### 実行効率
+- 並行処理可能な部分はPromise.allで最適化
+- レート制限対応（特にLLM API）
+- キャッシュ機能の実装

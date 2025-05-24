@@ -1,0 +1,70 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# PRレビューエージェント開発ルール
+
+## プロジェクト概要
+VoltAgentフレームワークを使用したGitHub Actions対応PRレビューエージェントの開発
+
+## コーディング規約
+
+### TypeScript
+- ESModules（import/export）を使用
+- Zodを使ったスキーマ検証を必須とする
+- 関数・クラス名は英語、コメントは日本語
+- strictモード有効でnull/undefinedチェックを徹底
+
+### ファイル構成
+- `src/agents/`: エージェント実装（Supervisor, CodeAnalysis, Security, Style, Summary）
+- `src/tools/`: GitHub API、ファイル解析、セキュリティスキャンツール
+- `src/types/`: Zodスキーマによる型定義（github.ts, review.ts, agent.ts）
+- `src/utils/`: 設定管理（config.ts）、ログ（logger.ts）
+
+### VoltAgent設計パターン
+- マルチエージェント構成を採用
+- SupervisorAgentが専門エージェントを協調させる
+- ツールは型安全（Zod）でライフサイクル対応
+- エラーハンドリングとタイムアウト処理を必須とする
+
+### GitHub Actions対応
+- 環境変数での設定管理（GITHUB_TOKEN, OPENAI_API_KEY等）
+- GitHub Actions用ログ出力形式（::notice::, ::warning::, ::error::）
+- PR情報の安全な取得と検証
+
+## 重要な原則
+
+### セキュリティ
+- APIキー・トークンをログ出力に含めない
+- 環境変数の検証を必須とする
+- 入力値の検証（Zodスキーマ）を徹底
+
+### パフォーマンス
+- 大量ファイルの差分解析時のメモリ効率を考慮
+- LLM APIコール最適化（レート制限、バッチ処理）
+- 並行処理でエージェント実行時間短縮
+
+### コード品質
+- 関心の分離（Single Responsibility Principle）
+- 依存性注入でテスタビリティを向上
+- エラーメッセージは日本語で分かりやすく
+
+## 禁止事項
+- 直接的なenum使用（z.enumを使用）
+- console.log（loggerユーティリティを使用）
+- ハードコードされた設定値
+- エラーの無視（適切なハンドリング必須）
+
+## 推奨ライブラリ
+- **VoltAgent**: @voltagent/core, @voltagent/vercel-ai, @voltagent/anthropic-ai, @voltagent/google-ai
+- **GitHub**: @octokit/rest, @octokit/types
+- **バリデーション**: zod
+- **環境管理**: dotenv
+- **テスト**: vitest
+- **開発**: tsx, typescript
+
+## コメント規則
+- 関数・クラスはJSDocで詳細説明
+- 複雑なロジックは日本語コメントで解説
+- TODO/FIXMEには責任者と期日を記載
