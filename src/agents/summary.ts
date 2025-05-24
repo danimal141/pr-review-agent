@@ -193,12 +193,15 @@ export class SummaryAgentHelpers {
    */
   private static calculateFileImpact(agentResults: AgentResult[]) {
     const allComments = agentResults.flatMap((result) => result.comments);
-    const fileImpact: Record<string, {
-      totalIssues: number;
-      bySeverity: { critical: number; error: number; warning: number; info: number };
-      categories: Set<string> | string[];
-      riskLevel: string;
-    }> = {};
+    const fileImpact: Record<
+      string,
+      {
+        totalIssues: number;
+        bySeverity: { critical: number; error: number; warning: number; info: number };
+        categories: Set<string> | string[];
+        riskLevel: string;
+      }
+    > = {};
 
     for (const comment of allComments) {
       if (!fileImpact[comment.filename]) {

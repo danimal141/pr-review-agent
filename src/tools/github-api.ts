@@ -2,6 +2,59 @@ import { Octokit } from "@octokit/rest";
 import { z } from "zod";
 import type { FileChange, GitHubPREvent, PRInfo } from "../types/github.js";
 
+// GitHub API レスポンスの型定義（手動定義）
+interface OctokitFile {
+  filename: string;
+  status: string;
+  additions: number;
+  deletions: number;
+  changes: number;
+  patch?: string;
+  sha: string;
+  blob_url: string;
+}
+
+interface OctokitComment {
+  id: number;
+  body: string;
+  path: string;
+  line?: number;
+  user?: {
+    login?: string;
+  } | null;
+}
+
+// GitHub Webhook ペイロードの型定義
+interface GitHubWebhookPayload {
+  action?: string;
+  number?: number;
+  pull_request?: {
+    id?: number;
+    number?: number;
+    title?: string;
+    body?: string | null;
+    head?: {
+      sha?: string;
+      ref?: string;
+    };
+    base?: {
+      sha?: string;
+      ref?: string;
+    };
+    changed_files?: number;
+    additions?: number;
+    deletions?: number;
+  };
+  repository?: {
+    id?: number;
+    name?: string;
+    full_name?: string;
+    owner?: {
+      login?: string;
+    };
+  };
+}
+
 /**
  * GitHub API操作ツール
  *
@@ -60,7 +113,7 @@ export class GitHubAPITool {
         per_page: 100, // 最大100ファイル
       });
 
-      return files.map((file) => ({
+      return files.map((file: OctokitFile) => ({
         filename: file.filename,
         status: this.mapFileStatus(file.status),
         additions: file.additions,
@@ -229,7 +282,7 @@ export class GitHubAPITool {
         pull_number: prNumber,
       });
 
-      return comments.map((comment) => ({
+      return comments.map((comment: OctokitComment) => ({
         id: comment.id,
         body: comment.body,
         path: comment.path,
@@ -276,43 +329,95 @@ export function createGitHubAPITool(token?: string): GitHubAPITool {
 /**
  * GitHub Webhook Event パーサー
  */
+export function parseGitHubPREvent(payload: unknown): GitHubPREvent {
+  try {
+    // 型安全なペイロード解析
+    const typedPayload = payload as GitHubWebhookPayload;
+
+    // 必要なデータの存在確認
+    if (
+      !typedPayload.action ||
+      !typedPayload.number ||
+      !typedPayload.pull_request ||
+      !typedPayload.repository
+    ) {
+      throw new Error("必要なペイロードデータが不足しています");
+    }
+
+    const pr = typedPayload.pull_request;
+    const repo = typedPayload.repository;
+
+    if (
+      !pr.id ||
+      !pr.number ||
+      !pr.title ||
+      !pr.head?.sha ||
+      !pr.head?.ref ||
+      !pr.base?.sha ||
+      !pr.base?.ref ||
+      !repo.id ||
+      !repo.name ||
+      !repo.full_name ||
+      !repo.owner?.login
+    ) {
+      throw new Error("PRまたはリポジトリの必要なデータが不足しています");
+    }
+
+    // actionの型チェック（型安全）
+    const validActions = ["opened", "synchronize", "reopened"] as const;
+    type ValidAction = (typeof validActions)[number];
+
+    const isValidAction = (action: string): action is ValidAction => {
+      return validActions.includes(action as ValidAction);
+    };
+
+    if (!isValidAction(typedPayload.action)) {
+      throw new Error(`サポートされていないアクション: ${typedPayload.action}`);
+    }
+
+    return {
+      action: typedPayload.action,
+      number: typedPayload.number,
+      pullRequest: {
+        id: pr.id,
+        number: pr.number,
+        title: pr.title,
+        body: pr.body ?? null, // undefinedをnullに変換
+        head: {
+          sha: pr.head.sha,
+          ref: pr.head.ref,
+        },
+        base: {
+          sha: pr.base.sha,
+          ref: pr.base.ref,
+        },
+        changedFiles: pr.changed_files,
+        additions: pr.additions,
+        deletions: pr.deletions,
+      },
+      repository: {
+        id: repo.id,
+        name: repo.name,
+        fullName: repo.full_name,
+        owner: {
+          login: repo.owner.login,
+        },
+      },
+    };
+  } catch (error) {
+    throw new Error(`PRイベントの解析に失敗: ${error}`);
+  }
+}
+
+// 後方互換性のためのクラスエクスポート（非推奨）
+/**
+ * @deprecated parseGitHubPREvent関数を使用してください
+ */
 export class GitHubEventParser {
   /**
-   * GitHub Webhookペイロードを解析してPRイベントを抽出
+   * @deprecated parseGitHubPREvent関数を使用してください
    */
-  static parsePREvent(payload: { action?: string; number?: number; pull_request?: { head?: { sha?: string }; base?: { sha?: string } } } | unknown): GitHubPREvent {
-    try {
-      return {
-        action: payload.action,
-        number: payload.number,
-        pullRequest: {
-          id: payload.pull_request.id,
-          number: payload.pull_request.number,
-          title: payload.pull_request.title,
-          body: payload.pull_request.body,
-          head: {
-            sha: payload.pull_request.head.sha,
-            ref: payload.pull_request.head.ref,
-          },
-          base: {
-            sha: payload.pull_request.base.sha,
-            ref: payload.pull_request.base.ref,
-          },
-          changedFiles: payload.pull_request.changed_files,
-          additions: payload.pull_request.additions,
-          deletions: payload.pull_request.deletions,
-        },
-        repository: {
-          id: payload.repository.id,
-          name: payload.repository.name,
-          fullName: payload.repository.full_name,
-          owner: {
-            login: payload.repository.owner.login,
-          },
-        },
-      };
-    } catch (error) {
-      throw new Error(`PRイベントの解析に失敗: ${error}`);
-    }
+  static parsePREvent(payload: unknown): GitHubPREvent {
+    return parseGitHubPREvent(payload);
   }
 }

@@ -526,7 +526,7 @@ export class CodeMetricsTool {
     linesOfCode: number;
     problematicFunctionCount: number;
     duplicateCodeRatio: number;
-    maintainabilityIndex: number
+    maintainabilityIndex: number;
   }): number {
     let score = 100;
 

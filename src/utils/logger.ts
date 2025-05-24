@@ -53,7 +53,12 @@ class Logger {
   /**
    * ログメッセージを出力
    */
-  private log(level: LogLevel, message: string, component?: string, data?: Record<string, unknown> | string | number | boolean | null): void {
+  private log(
+    level: LogLevel,
+    message: string,
+    component?: string,
+    data?: Record<string, unknown> | string | number | boolean | null
+  ): void {
     if (LOG_LEVELS[level] < this.minLevel) {
       return;
     }
@@ -100,35 +105,55 @@ class Logger {
   /**
    * DEBUGレベルのログ
    */
-  debug(message: string, component?: string, data?: Record<string, unknown> | string | number | boolean | null): void {
+  debug(
+    message: string,
+    component?: string,
+    data?: Record<string, unknown> | string | number | boolean | null
+  ): void {
     this.log("debug", message, component, data);
   }
 
   /**
    * INFOレベルのログ
    */
-  info(message: string, component?: string, data?: Record<string, unknown> | string | number | boolean | null): void {
+  info(
+    message: string,
+    component?: string,
+    data?: Record<string, unknown> | string | number | boolean | null
+  ): void {
     this.log("info", message, component, data);
   }
 
   /**
    * WARNレベルのログ
    */
-  warn(message: string, component?: string, data?: Record<string, unknown> | string | number | boolean | null): void {
+  warn(
+    message: string,
+    component?: string,
+    data?: Record<string, unknown> | string | number | boolean | null
+  ): void {
     this.log("warn", message, component, data);
   }
 
   /**
    * ERRORレベルのログ
    */
-  error(message: string, component?: string, data?: Record<string, unknown> | string | number | boolean | null): void {
+  error(
+    message: string,
+    component?: string,
+    data?: Record<string, unknown> | string | number | boolean | null
+  ): void {
     this.log("error", message, component, data);
   }
 
   /**
    * エラーオブジェクトをログ出力
    */
-  logError(error: Error, component?: string, additionalData?: Record<string, unknown> | string | number | boolean | null): void {
+  logError(
+    error: Error,
+    component?: string,
+    additionalData?: Record<string, unknown> | string | number | boolean | null
+  ): void {
     this.error(error.message, component, {
       name: error.name,
       stack: error.stack,
@@ -185,11 +210,17 @@ export const logger = new Logger(config.logging.level);
  */
 export function createLogger(component: string) {
   return {
-    debug: (message: string, data?: Record<string, unknown> | string | number | boolean | null) => logger.debug(message, component, data),
-    info: (message: string, data?: Record<string, unknown> | string | number | boolean | null) => logger.info(message, component, data),
-    warn: (message: string, data?: Record<string, unknown> | string | number | boolean | null) => logger.warn(message, component, data),
-    error: (message: string, data?: Record<string, unknown> | string | number | boolean | null) => logger.error(message, component, data),
-    logError: (error: Error, additionalData?: Record<string, unknown> | string | number | boolean | null) =>
-      logger.logError(error, component, additionalData),
+    debug: (message: string, data?: Record<string, unknown> | string | number | boolean | null) =>
+      logger.debug(message, component, data),
+    info: (message: string, data?: Record<string, unknown> | string | number | boolean | null) =>
+      logger.info(message, component, data),
+    warn: (message: string, data?: Record<string, unknown> | string | number | boolean | null) =>
+      logger.warn(message, component, data),
+    error: (message: string, data?: Record<string, unknown> | string | number | boolean | null) =>
+      logger.error(message, component, data),
+    logError: (
+      error: Error,
+      additionalData?: Record<string, unknown> | string | number | boolean | null
+    ) => logger.logError(error, component, additionalData),
   };
 }

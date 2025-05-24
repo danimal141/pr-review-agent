@@ -264,17 +264,32 @@ export class PRReviewWorkflow {
         const parsed = JSON.parse(jsonMatch[1]);
 
         if (parsed.issues && Array.isArray(parsed.issues)) {
-          return parsed.issues.map((issue: { filename?: string; line?: number; title?: string; description?: string; severity?: string; category?: string; suggestion?: string; codeSnippet?: string; evidence?: string }, index: number) => ({
-            id: `${agentName}-${index}`,
-            filename: issue.filename || "unknown",
-            line: issue.line,
-            category: issue.category || "codeQuality",
-            severity: issue.severity || "info",
-            title: issue.title || "問題が検出されました",
-            description: issue.description || "",
-            suggestion: issue.suggestion,
-            codeSnippet: issue.evidence,
-          }));
+          return parsed.issues.map(
+            (
+              issue: {
+                filename?: string;
+                line?: number;
+                title?: string;
+                description?: string;
+                severity?: string;
+                category?: string;
+                suggestion?: string;
+                codeSnippet?: string;
+                evidence?: string;
+              },
+              index: number
+            ) => ({
+              id: `${agentName}-${index}`,
+              filename: issue.filename || "unknown",
+              line: issue.line,
+              category: issue.category || "codeQuality",
+              severity: issue.severity || "info",
+              title: issue.title || "問題が検出されました",
+              description: issue.description || "",
+              suggestion: issue.suggestion,
+              codeSnippet: issue.evidence,
+            })
+          );
         }
       }
 
@@ -350,7 +365,10 @@ export class PRReviewWorkflow {
   /**
    * 要約コメントを作成
    */
-  private createSummaryComment(reviewResult: ReviewResult, summaryResult: { keyFindings?: string[]; nextSteps?: string[] } | unknown): string {
+  private createSummaryComment(
+    reviewResult: ReviewResult,
+    summaryResult: { keyFindings?: string[]; nextSteps?: string[] } | unknown
+  ): string {
     const { summary } = reviewResult;
 
     let comment = "## 🤖 AIレビュー結果\n\n";
@@ -368,7 +386,13 @@ export class PRReviewWorkflow {
     comment += "\n";
 
     // 主要な発見
-    if (summaryResult && typeof summaryResult === "object" && "keyFindings" in summaryResult && Array.isArray(summaryResult.keyFindings) && summaryResult.keyFindings.length > 0) {
+    if (
+      summaryResult &&
+      typeof summaryResult === "object" &&
+      "keyFindings" in summaryResult &&
+      Array.isArray(summaryResult.keyFindings) &&
+      summaryResult.keyFindings.length > 0
+    ) {
       comment += "**主要な発見**:\n";
       for (const finding of summaryResult.keyFindings) {
         comment += `- ${finding}\n`;
@@ -377,7 +401,13 @@ export class PRReviewWorkflow {
     }
 
     // 推奨事項
-    if (summaryResult && typeof summaryResult === "object" && "nextSteps" in summaryResult && Array.isArray(summaryResult.nextSteps) && summaryResult.nextSteps.length > 0) {
+    if (
+      summaryResult &&
+      typeof summaryResult === "object" &&
+      "nextSteps" in summaryResult &&
+      Array.isArray(summaryResult.nextSteps) &&
+      summaryResult.nextSteps.length > 0
+    ) {
       comment += "**推奨事項**:\n";
       for (const step of summaryResult.nextSteps) {
         comment += `- ${step}\n`;

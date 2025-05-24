@@ -37,57 +37,66 @@ app.get("/api/health", (req, res) => {
 });
 
 // PR分析エンドポイント（デモ用）
-app.post("/api/analyze", async (req: { body: { code: string } }, res: { json: (data: unknown) => void; status: (code: number) => { json: (data: unknown) => void } }) => {
-  try {
-    const { code } = req.body;
-
-    if (!code) {
-      return res.status(400).json({ error: "コードが提供されていません" });
+app.post(
+  "/api/analyze",
+  async (
+    req: { body: { code: string } },
+    res: {
+      json: (data: unknown) => void;
+      status: (code: number) => { json: (data: unknown) => void };
     }
+  ) => {
+    try {
+      const { code } = req.body;
 
-    logger.info("WebServer", "コード分析リクエスト");
+      if (!code) {
+        return res.status(400).json({ error: "コードが提供されていません" });
+      }
 
-    // 新しいCodeAnalyzerクラスを使用
-    const analyzer = new CodeAnalyzer();
+      logger.info("WebServer", "コード分析リクエスト");
 
-    // ファイル名を推測
-    const filename = code.includes("function")
-      ? "code.js"
-      : code.includes("def ")
-        ? "code.py"
-        : code.includes("class ") && code.includes("interface")
-          ? "code.ts"
-          : code.includes("public class")
-            ? "Code.java"
-            : "code.txt";
+      // 新しいCodeAnalyzerクラスを使用
+      const analyzer = new CodeAnalyzer();
 
-    const analysisReport = await analyzer.analyzeCode(code, filename);
+      // ファイル名を推測
+      const filename = code.includes("function")
+        ? "code.js"
+        : code.includes("def ")
+          ? "code.py"
+          : code.includes("class ") && code.includes("interface")
+            ? "code.ts"
+            : code.includes("public class")
+              ? "Code.java"
+              : "code.txt";
 
-    logger.info("WebServer", "コード分析完了");
+      const analysisReport = await analyzer.analyzeCode(code, filename);
 
-    res.json({
-      success: true,
-      result: {
-        reviewId: analysisReport.analysisId,
-        summary: {
-          overallScore: analysisReport.summary.overallScore,
-          totalComments: analysisReport.summary.totalComments,
-          recommendation: analysisReport.summary.recommendation,
+      logger.info("WebServer", "コード分析完了");
+
+      res.json({
+        success: true,
+        result: {
+          reviewId: analysisReport.analysisId,
+          summary: {
+            overallScore: analysisReport.summary.overallScore,
+            totalComments: analysisReport.summary.totalComments,
+            recommendation: analysisReport.summary.recommendation,
+          },
+          comments: analysisReport.agentResults.flatMap((agent) => agent.comments),
+          executionTime: analysisReport.executionStats.totalTimeMs,
         },
-        comments: analysisReport.agentResults.flatMap((agent) => agent.comments),
-        executionTime: analysisReport.executionStats.totalTimeMs,
-      },
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error("WebServer", `PR分析エラー: ${errorMessage}`);
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error("WebServer", `PR分析エラー: ${errorMessage}`);
 
-    res.status(500).json({
-      error: "サーバーエラーが発生しました",
-      details: errorMessage,
-    });
+      res.status(500).json({
+        error: "サーバーエラーが発生しました",
+        details: errorMessage,
+      });
+    }
   }
-});
+);
 
 // parseAgentComments関数は不要になったので削除
 
