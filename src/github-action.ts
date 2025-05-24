@@ -262,11 +262,22 @@ export async function runGitHubAction(): Promise<void> {
  */
 async function main(): Promise<void> {
   try {
+    // デバッグ情報の出力
+    logger.info('GitHubAction', `Node.js version: ${process.version}`);
+    logger.info('GitHubAction', `Working directory: ${process.cwd()}`);
+    logger.info('GitHubAction', `Environment: GITHUB_ACTIONS=${process.env.GITHUB_ACTIONS}`);
+
     // GitHub Actionsコンテキストかどうかをチェック
     if (process.env.GITHUB_ACTIONS !== 'true') {
       logger.warn('GitHubAction', 'GitHub Actionsコンテキスト外で実行されています');
       return;
     }
+
+    // 環境変数の存在確認（値は出力しない）
+    const hasGitHubToken = Boolean(process.env.GITHUB_TOKEN);
+    const hasOpenAIKey = Boolean(process.env.OPENAI_API_KEY);
+    logger.info('GitHubAction', `GITHUB_TOKEN: ${hasGitHubToken ? '設定済み' : '未設定'}`);
+    logger.info('GitHubAction', `OPENAI_API_KEY: ${hasOpenAIKey ? '設定済み' : '未設定'}`);
 
     logger.info('GitHubAction', 'GitHub Actions PR レビューエージェント開始');
     await runGitHubAction();
@@ -274,7 +285,12 @@ async function main(): Promise<void> {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
     logger.error('GitHubAction', `実行エラー: ${errorMessage}`);
+    if (errorStack) {
+      logger.error('GitHubAction', `スタックトレース: ${errorStack}`);
+    }
 
     // GitHub Actionsにエラーを報告
     core.setFailed(errorMessage);
@@ -283,6 +299,23 @@ async function main(): Promise<void> {
 }
 
 // ES moduleのトップレベルでの実行チェック
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main();
+// GitHub Actionsコンテキストでの直接実行対応
+const isMainModule = () => {
+  // ES Module環境での実行チェック
+  if (typeof import.meta !== 'undefined' && import.meta.url) {
+    return import.meta.url === `file://${process.argv[1]}`;
+  }
+  // CommonJS環境での実行チェック
+  if (typeof require !== 'undefined' && require.main) {
+    return require.main === module;
+  }
+  return false;
+};
+
+// モジュールが直接実行された場合、またはGitHub Actionsコンテキストの場合に実行
+if (isMainModule() || process.env.GITHUB_ACTIONS === 'true') {
+  main().catch((error) => {
+    console.error('GitHub Action実行エラー:', error);
+    process.exit(1);
+  });
 }

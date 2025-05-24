@@ -33,12 +33,24 @@ jobs:
       - name: 📦 Install dependencies
         run: |
           npm ci
+
+      - name: 🔨 Build TypeScript
+        run: |
           npm run build
+          echo "✅ ビルド完了"
+          ls -la dist/
+          echo "📄 github-action.js の先頭確認:"
+          head -20 dist/github-action.js
 
       - name: 🤖 Run AI PR Review
         id: ai-review
         run: |
-          # TypeScriptをビルドしてから実行
+          # TypeScriptをビルドしてから実行（ES Module対応）
+          echo "🔍 GitHub Actions環境変数チェック"
+          echo "GITHUB_ACTIONS: $GITHUB_ACTIONS"
+          echo "GITHUB_TOKEN: ${GITHUB_TOKEN:0:10}..."
+          echo "OPENAI_API_KEY: ${OPENAI_API_KEY:0:10}..."
+          echo "🚀 AI PR Review開始"
           node dist/github-action.js
         env:
           # GitHub Token（PR書き込み権限付き）
