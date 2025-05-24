@@ -2,6 +2,7 @@
   "name": "pr-review-agent",
   "version": "0.1.0",
   "description": "VoltAgentを使用したAIコード分析ツール",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx src/index.ts",
